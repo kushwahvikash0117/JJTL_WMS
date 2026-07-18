@@ -1,24 +1,26 @@
 import mongoose from 'mongoose';
 
 const itemSchema = new mongoose.Schema({
-  location: { type: String, required: true }, // e.g., 01-01-01
+  // Core fields from your new AddItem.jsx form
+  buyer: { type: String, required: true },
   poNo: { type: String, required: true },
-  customer: { type: String, required: true },
-  color: { type: String, required: true },
+  location: { type: String, required: true },
   productDescription: { type: String },
-  siliconFinishQuality: { type: String },
-  grade: { type: String },
-  netWeight: { type: Number },
-  lotNo: { type: String, required: true },
-  rollNo: { type: String, required: true },
-  processType: { type: String },
-  gsm: { type: Number },
-  grossWeight: { type: Number },
-  qty: { type: Number, required: true },
-  actualWidth: { type: String },
-  finishType: { type: String },
+  lot: { type: String, required: true },
+  element: { type: String },
+  qty: { type: Number, required: true }, // Kgs
+  netWeight: { type: Number, required: true }, // Kgs
+  grossWeight: { type: Number, required: true }, // Kgs
+  length: { type: Number }, // cm
+  breadth: { type: Number }, // cm
+  height: { type: Number }, // cm
+  
+  // System-generated fields
+  rollNo: { type: String, required: true, unique: true },
+  barcode: { type: String, required: true, index: true },
+  
+  // Tracking fields
   date: { type: Date, default: Date.now },
-  barcode: { type: String, required: true, index: true }, // Unique physical barcode
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

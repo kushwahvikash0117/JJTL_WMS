@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Lock, User, Mail, ShieldCheck, Hash } from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -13,119 +14,89 @@ const Register = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    userId: "",
-    password: "",
-    confirmPassword: "",
-  });
-
+  const [formData, setFormData] = useState({ name: "", userId: "", password: "", confirmPassword: "" });
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
 
-  const sendOTP = async () => {
+  const handleAction = async (fn, endpoint, data, nextStep) => {
+    setLoading(true); setError(""); setMessage("");
     try {
-      setLoading(true);
-      setError("");
-      setMessage("");
-      await axios.post(`${API_URL}/auth/send-otp`, { email });
-      setMessage("OTP sent successfully.");
-      setStep(2);
-    } catch (err) {
-      setError(err.response?.data?.error || "Failed to send OTP.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOTP = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      setMessage("");
-      await axios.post(`${API_URL}/auth/verify-otp`, { email, otp });
-      setMessage("OTP verified successfully.");
-      setStep(3);
-    } catch (err) {
-      setError(err.response?.data?.error || "Invalid OTP.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const registerUser = async () => {
-    if (formData.password !== formData.confirmPassword) {
-      return setError("Passwords do not match.");
-    }
-    try {
-      setLoading(true);
-      setError("");
-      setMessage("");
-      const payload = {
-        name: formData.name,
-        email,
-        userId: formData.userId,
-        password: formData.password,
-      };
-      const res = await axios.post(`${API_URL}/auth/register`, payload);
-      setMessage(res.data.message || "Registration successful.");
-      setTimeout(() => navigate("/login"), 1500);
-    } catch (err) {
-      setError(err.response?.data?.error || "Registration failed.");
-    } finally {
-      setLoading(false);
-    }
+      await axios.post(`${API_URL}${endpoint}`, data);
+      if (nextStep) setStep(nextStep);
+      else { setMessage("Registration successful! Redirecting..."); setTimeout(() => navigate("/login"), 1500); }
+    } catch (err) { setError(err.response?.data?.error || "An error occurred."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a1929] text-white p-4 font-sans">
-      <div className="fixed inset-0 pointer-events-none z-0" style={{ background: "radial-gradient(ellipse at 30% 50%, rgba(30,111,191,0.15) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(0,212,255,0.08) 0%, transparent 50%)" }} />
-
-      <div className="relative z-10 w-full max-w-sm bg-[#1e293b] border border-[#334155] rounded-[16px] p-6 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <div className="text-center mb-6 sm:mb-8">
-          <img src="/jj-logo.jpeg" alt="JJM Logo" className="w-16 sm:w-20 mx-auto mb-3 rounded-lg shadow-[0_0_15px_rgba(0,229,255,0.3)]" />
-          <h1 className="text-lg sm:text-[22px] font-bold tracking-[2px] text-[#00e5ff] drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">USER REGISTRATION</h1>
-        </div>
-
-        {message && <div className="bg-green-500/10 border border-green-500 text-green-400 p-3 rounded-lg mb-4 text-xs text-center">{message}</div>}
-        {error && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg mb-4 text-xs text-center">{error}</div>}
-
-        {step === 1 && (
-          <>
-            <label className="block text-xs sm:text-sm mb-1 text-[#94a3b8]">Email Address</label>
-            <input type="email" placeholder="Enter Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-            <button onClick={sendOTP} disabled={loading} className="w-full bg-[#00e5ff] text-[#0a1929] font-bold py-3 rounded-lg mt-6 hover:bg-[#00c5dd] transition disabled:opacity-50">{loading ? "SENDING..." : "SEND OTP"}</button>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <label className="block text-xs sm:text-sm mb-1 text-[#94a3b8]">Enter OTP</label>
-            <input type="text" placeholder="6 Digit OTP" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-            <button onClick={verifyOTP} disabled={loading} className="w-full bg-[#00e5ff] text-[#0a1929] font-bold py-3 rounded-lg mt-6 hover:bg-[#00c5dd] transition disabled:opacity-50">{loading ? "VERIFYING..." : "VERIFY OTP"}</button>
-          </>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4">
-            <input type="text" placeholder="Full Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-            <input type="text" placeholder="User ID" value={formData.userId} onChange={(e) => setFormData({ ...formData, userId: e.target.value })} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-            
-            <div className="relative">
-              <input type={passwordVisible ? "text" : "password"} placeholder="Password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-              <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-3 top-3 text-[#94a3b8] hover:text-[#00e5ff]">👁</button>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white p-8 sm:p-10 rounded-3xl shadow-sm border border-gray-100">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gray-900 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-lg">
+              <img src="/jj-logo.jpeg" alt="Logo" className="h-12 w-12 object-contain" />
             </div>
-
-            <div className="relative">
-              <input type={confirmVisible ? "text" : "password"} placeholder="Confirm Password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} className="w-full bg-[#0d2238] border border-[#334155] p-3 rounded-lg text-white focus:border-[#00e5ff] outline-none" />
-              <button type="button" onClick={() => setConfirmVisible(!confirmVisible)} className="absolute right-3 top-3 text-[#94a3b8] hover:text-[#00e5ff]">👁</button>
-            </div>
-
-            <button onClick={registerUser} disabled={loading} className="w-full bg-[#00e5ff] text-[#0a1929] font-bold py-3 rounded-lg hover:bg-[#00c5dd] transition disabled:opacity-50">{loading ? "REGISTERING..." : "REGISTER"}</button>
+            <h1 className="text-2xl font-extrabold text-gray-900">Create Account</h1>
+            <p className="text-gray-500 text-sm mt-1">Join the JJTL WMS system</p>
           </div>
-        )}
 
-        <div className="text-center mt-6">
-          <Link to="/login" className="text-[#00e5ff] hover:text-white text-xs transition">Already have an account? Log in</Link>
+          {/* Progress Indicator */}
+          <div className="flex gap-2 mb-8">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? 'bg-cyan-600' : 'bg-gray-100'}`} />
+            ))}
+          </div>
+
+          {message && <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl mb-6 text-sm font-medium border border-emerald-100">{message}</div>}
+          {error && <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl mb-6 text-sm font-medium border border-rose-100">{error}</div>}
+
+          <div className="space-y-5">
+            {step === 1 && (
+              <>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" placeholder="name@company.com" />
+                </div>
+                <button onClick={() => handleAction(axios.post, "/auth/send-otp", { email }, 2)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Sending..." : "Send OTP"}</button>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Verification Code</label>
+                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl focus:border-cyan-500 outline-none transition-all text-center text-xl tracking-[0.5em]" placeholder="000000" />
+                <button onClick={() => handleAction(axios.post, "/auth/verify-otp", { email, otp }, 3)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Verifying..." : "Verify OTP"}</button>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <div className="relative">
+                  <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input type="text" placeholder="Full Name" onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                </div>
+                <div className="relative">
+                  <Hash className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input type="text" placeholder="User ID" onChange={(e) => setFormData({...formData, userId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input type={passwordVisible ? "text" : "password"} placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                  <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-4 top-3.5 text-gray-400">{passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input type={confirmVisible ? "text" : "password"} placeholder="Confirm Password" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                  <button type="button" onClick={() => setConfirmVisible(!confirmVisible)} className="absolute right-4 top-3.5 text-gray-400">{confirmVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                </div>
+                <button onClick={() => handleAction(axios.post, "/auth/register", { ...formData, email }, null)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Registering..." : "Complete Registration"}</button>
+              </>
+            )}
+          </div>
+
+          <div className="text-center mt-8 text-sm text-gray-500">
+            Already have an account? <Link to="/login" className="text-cyan-600 font-bold hover:underline">Log in</Link>
+          </div>
         </div>
       </div>
     </div>

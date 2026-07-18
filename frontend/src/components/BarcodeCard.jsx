@@ -32,26 +32,29 @@ const BarcodeCard = ({ itemData }) => {
           ref={cardRef} 
           className="w-[4in] h-[2in] p-2 border-2 border-black bg-white text-[6pt] font-sans flex flex-col justify-between shrink-0"
         >
-          <div className="flex justify-between border-b border-black pb-0.5 font-bold">
-            <span>PO: {itemData.poNo}</span> <span>Cust: {itemData.customer}</span> <span>Color: {itemData.color}</span>
+          {/* Header Row */}
+          <div className="flex justify-between border-b border-black pb-1.5 font-bold">
+            <span>Buyer: {itemData.buyer}</span> <span>PO: {itemData.poNo}</span> <span>Loc: {itemData.location}</span>
           </div>
+          
+          {/* Main Grid */}
           <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-1 flex-grow">
             <div className="col-span-2 truncate"><strong>Desc:</strong> {itemData.productDescription}</div>
-            <div className="col-span-2"><strong>Finish:</strong> {itemData.siliconFinishQuality} - {itemData.finishType}</div>
-            <div><strong>Grade:</strong> {itemData.grade}</div>
-            <div><strong>GSM:</strong> {itemData.gsm}</div>
+            <div><strong>Lot:</strong> {itemData.lot}</div>
+            <div><strong>Element:</strong> {itemData.element}</div>
+            <div><strong>Qty:</strong> {itemData.qty}</div>
             <div><strong>Net Wt:</strong> {itemData.netWeight}</div>
             <div><strong>Gross Wt:</strong> {itemData.grossWeight}</div>
-            <div><strong>Lot:</strong> {itemData.lotNo}</div>
-            <div><strong>Roll:</strong> {itemData.rollNo}</div>
-            <div><strong>Qty:</strong> {itemData.qty}</div>
-            <div><strong>Width:</strong> {itemData.actualWidth}</div>
+            <div><strong>Dim (LBH):</strong> {itemData.length}x{itemData.breadth}x{itemData.height}</div>
+            <div className="col-span-2 font-bold"><strong>Roll No:</strong> {itemData.rollNo}</div>
           </div>
+
+          {/* Footer Barcode Section */}
           <div className="flex flex-col items-center border-t border-black pt-0.5">
             <svg ref={barcodeRef} className="h-6"></svg>
             <div className="flex justify-between w-full px-1 text-[5pt]">
               <span>{itemData.barcode}</span>
-              <span>{itemData.date ? new Date(itemData.date).toLocaleDateString() : ''}</span>
+              <span>{itemData.date ? new Date(itemData.date).toLocaleDateString() : new Date().toLocaleDateString()}</span>
             </div>
           </div>
         </div>

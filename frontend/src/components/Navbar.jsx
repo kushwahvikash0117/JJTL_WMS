@@ -1,54 +1,74 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react'; // Ensure lucide-react is installed
+import { Menu, X, LayoutDashboard, Search, Package, PlusCircle, History, Settings } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  const isActive = (path) => 
-    location.pathname === path ? "text-cyan-400 font-bold" : "hover:text-cyan-400";
+  const navLinks = [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Scan', path: '/scan', icon: Search },
+    { name: 'Inventory', path: '/inventory', icon: Package },
+    { name: 'Add Item', path: '/add-item', icon: PlusCircle },
+    { name: 'Logs', path: '/logs', icon: History },
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-gray-900 text-white shadow-lg border-b border-gray-700">
+    <nav className="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           
-          {/* Logo and Brand */}
-          <div className="flex-shrink-0 flex items-center gap-3">
-            <Link to="/dashboard" className="flex items-center gap-3">
-              <img src="/jj-logo.jpeg" alt="JJTL WMS Logo" className="h-10 w-10 object-contain" />
-              <span className="text-2xl font-bold tracking-wider text-cyan-400">JJTL WMS</span>
-            </Link>
-          </div>
+          {/* Logo */}
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center">
+              <img src="/jj-logo.jpeg" alt="Logo" className="h-7 w-7 object-contain" />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight text-white">JJTL <span className="text-cyan-400">WMS</span></span>
+          </Link>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex space-x-6">
-            <Link to="/dashboard" className={`${isActive('/dashboard')} transition`}>Dashboard</Link>
-            <Link to="/scan" className={`${isActive('/scan')} transition`}>Scan Item</Link>
-            <Link to="/inventory" className={`${isActive('/inventory')} transition`}>Inventory</Link>
-            <Link to="/add-item" className={`${isActive('/add-item')} transition`}>Add Item</Link>
-            <Link to="/logs" className={`${isActive('/logs')} transition`}>Audit Logs</Link>
-            <Link to="/settings" className={`${isActive('/settings')} transition`}>Settings</Link>
+          {/* Desktop Links */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+                  isActive(link.path) 
+                    ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/20' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
+              >
+                <link.icon size={16} /> {link.name}
+              </Link>
+            ))}
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-300 hover:text-white">
-              {isOpen ? <X size={28} /> : <Menu size={28} />}
-            </button>
-          </div>
+          <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-gray-400 hover:text-white">
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Navigation Links */}
+      {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-gray-800 px-4 pt-2 pb-4 space-y-2">
-          <Link to="/dashboard" onClick={() => setIsOpen(false)} className={`block py-2 ${isActive('/dashboard')}`}>Dashboard</Link>
-          <Link to="/inventory" onClick={() => setIsOpen(false)} className={`block py-2 ${isActive('/inventory')}`}>Inventory</Link>
-          <Link to="/add-item" onClick={() => setIsOpen(false)} className={`block py-2 ${isActive('/add-item')}`}>Add Item</Link>
-          <Link to="/logs" onClick={() => setIsOpen(false)} className={`block py-2 ${isActive('/logs')}`}>Audit Logs</Link>
-          <Link to="/settings" onClick={() => setIsOpen(false)} className={`block py-2 ${isActive('/settings')}`}>Settings</Link>
+        <div className="md:hidden bg-gray-900 border-t border-gray-800 p-4 space-y-2 animate-in slide-in-from-top-5">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              to={link.path}
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold ${
+                isActive(link.path) ? 'bg-cyan-600 text-white' : 'text-gray-400'
+              }`}
+            >
+              <link.icon size={18} /> {link.name}
+            </Link>
+          ))}
         </div>
       )}
     </nav>

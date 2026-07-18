@@ -1,21 +1,37 @@
-import transporter from '../config/mail.js';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    // Adding this 'socketTimeout' and 'family' configuration
+    socketTimeout: 10000, 
+    connectionTimeout: 10000,
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASSWORD
+    },
+    // This forces the use of IPv4, bypassing ENETUNREACH on IPv6 addresses
+    family: 4 
+});
 
 /**
- * Sends a generic email
+ * Sends an email
  * @param {string} to - Recipient email
  * @param {string} subject - Email subject
- * @param {string} html - Email body
+ * @param {string} body - The HTML content of the email
  */
-export const sendEmail = async (to, subject, html) => {
-  try {
-    await transporter.sendMail({
-      from: `"JJTL Warehouse System" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    console.error('[EmailService] Error:', error);
-    throw new Error('Failed to send email');
-  }
+export const sendEmail = async (to, subject, body) => {
+    try {
+        const info = await transporter.sendMail({
+            from: `"JJTL Warehouse System" <${process.env.EMAIL}>`,
+            to,
+            subject,
+            html: body // Change 'text' to 'html' to render tags correctly
+        });
+
+        console.log('Email sent:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('Email sending failed:', error);
+        throw error;
+    }
 };
