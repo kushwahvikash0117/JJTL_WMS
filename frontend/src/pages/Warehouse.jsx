@@ -96,7 +96,7 @@ const Warehouse = () => {
             <tbody className="divide-y divide-gray-50">
               {filteredItems.map((item) => (
                 <tr key={item._id} className="hover:bg-cyan-50/30">
-                  {columns.map(col => <td key={col} className="px-6 py-4 text-sm text-gray-600">{item[col]}</td>)}
+                  {columns.map(col => <td key={col} className="px-6 py-4 text-sm text-gray-600">{item[col] || "N/A"}</td>)}
                   <td className="px-6 py-4"><button onClick={() => setSelectedItem(item)} className="text-cyan-600 bg-cyan-50 p-2 rounded-xl"><Eye size={16}/></button></td>
                 </tr>
               ))}

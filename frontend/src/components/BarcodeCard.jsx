@@ -21,7 +21,7 @@ const BarcodeCard = ({ itemData }) => {
     const canvas = await html2canvas(cardRef.current, { scale: 3 });
     const pdf = new jsPDF('landscape', 'in', [4, 2]);
     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0.1, 0.1, 3.8, 1.8);
-    pdf.save(`Label_${itemData.barcode}.pdf`);
+    pdf.save(`Label_${itemData.rollNo}.pdf`);
   };
 
   return (

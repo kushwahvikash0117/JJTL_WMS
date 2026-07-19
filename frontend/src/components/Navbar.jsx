@@ -8,9 +8,9 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Add Item', path: '/add-item', icon: PlusCircle },
     { name: 'Scan', path: '/scan', icon: Search },
     { name: 'Inventory', path: '/inventory', icon: Package },
-    { name: 'Add Item', path: '/add-item', icon: PlusCircle },
     { name: 'Logs', path: '/logs', icon: History },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];

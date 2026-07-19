@@ -67,7 +67,7 @@ const Dashboard = () => {
                 <div className={`w-2 h-2 rounded-full ${log.action === 'IN' ? 'bg-green-500' : 'bg-red-500'}`} />
                 <div>
                   <p className="text-sm font-bold text-gray-800">{log.performedBy?.name || 'System'}</p>
-                  <p className="text-xs text-gray-500 font-mono">{log.itemId?.barcode || 'N/A'}</p>
+                  <p className="text-xs text-gray-500 font-mono">{log.itemId?.rollNo || 'N/A'}</p>
                 </div>
               </div>
               <div className="text-right">
