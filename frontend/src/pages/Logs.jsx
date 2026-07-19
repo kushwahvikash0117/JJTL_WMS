@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getLogs } from '../api/logService';
-import { Search, History, Filter } from 'lucide-react';
+import { Search, History } from 'lucide-react';
 
 const Logs = () => {
   const [logs, setLogs] = useState([]);
@@ -26,7 +26,7 @@ const Logs = () => {
     return logs.filter((log) => 
       log.performedBy?.name?.toLowerCase().includes(search.toLowerCase()) ||
       log.action?.toLowerCase().includes(search.toLowerCase()) ||
-      log.itemId?.barcode?.toLowerCase().includes(search.toLowerCase())
+      log.itemId?.rollNo?.toLowerCase().includes(search.toLowerCase())
     );
   }, [logs, search]);
 
@@ -64,7 +64,7 @@ const Logs = () => {
                 <tr>
                   <th className="px-6 py-5">User</th>
                   <th className="px-6 py-5">Action</th>
-                  <th className="px-6 py-5">Barcode</th>
+                  <th className="px-6 py-5">Roll No</th>
                   <th className="px-6 py-5">Remarks</th>
                   <th className="px-6 py-5">Timestamp</th>
                 </tr>
@@ -83,8 +83,8 @@ const Logs = () => {
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-6 py-5 font-mono text-xs text-cyan-700 bg-cyan-50/50 inline-block mt-4 ml-6 rounded-md">
-                        {log.itemId?.barcode || 'N/A'}
+                      <td className="px-6 py-5 font-bold text-cyan-700">
+                        {log.itemId?.rollNo || 'N/A'}
                       </td>
                       <td className="px-6 py-5 text-gray-500 text-sm italic">{log.remarks || '-'}</td>
                       <td className="px-6 py-5 text-gray-400 text-xs">

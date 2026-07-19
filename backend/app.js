@@ -4,6 +4,7 @@ import authRoutes from './routes/authRoutes.js';
 import itemRoutes from './routes/itemRoutes.js';
 import logRoutes from './routes/logRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import binRoutes from './routes/binRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/bins', binRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

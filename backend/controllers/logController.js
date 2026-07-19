@@ -15,7 +15,8 @@ export const getLogs = async (req, res) => {
     const logs = await Log.find()
       .populate({
         path: 'itemId',
-        select: 'barcode poNo customer location productDescription qty'
+        // Update select to include 'rollNo' instead of 'barcode'
+        select: 'rollNo poNo customer location productDescription qty'
       })
       .populate({
         path: 'performedBy',

@@ -10,7 +10,7 @@ const BarcodeCard = ({ itemData }) => {
   useEffect(() => {
     if (itemData && barcodeRef.current) {
       barcodeRef.current.innerHTML = "";
-      JsBarcode(barcodeRef.current, itemData.barcode, {
+      JsBarcode(barcodeRef.current, itemData.rollNo, {
         format: "CODE128", width: 1.5, height: 30, displayValue: false, margin: 0
       });
     }
@@ -34,7 +34,7 @@ const BarcodeCard = ({ itemData }) => {
         >
           {/* Header Row */}
           <div className="flex justify-between border-b border-black pb-1.5 font-bold">
-            <span>Buyer: {itemData.buyer}</span> <span>PO: {itemData.poNo}</span> <span>Loc: {itemData.location}</span>
+            <span>Buyer: {itemData.buyer}</span> <span>PO: {itemData.poNo}</span> 
           </div>
           
           {/* Main Grid */}

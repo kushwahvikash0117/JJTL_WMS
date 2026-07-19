@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { addItem } from '../api/itemService';
 import BarcodeCard from '../components/BarcodeCard';
 import * as XLSX from 'xlsx';
-import { LOCATION_BARCODE_MAP } from '../utils/constants';
-import { Upload, PlusCircle, CheckCircle, Package, Database } from 'lucide-react';
+import { Upload, PlusCircle, CheckCircle, Package } from 'lucide-react';
 
 const generateUniqueRollNo = () => `RL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
 const AddItem = () => {
   const [loading, setLoading] = useState(false);
   const [createdItem, setCreatedItem] = useState(null);
+  
+  // Removed 'location' from form data
   const [formData, setFormData] = useState({
-    buyer: '', poNo: '', location: '', productDescription: '', 
+    buyer: '', poNo: '', productDescription: '', 
     lot: '', element: '', qty: '', netWeight: '', 
     grossWeight: '', length: '', breadth: '', height: ''
   });
@@ -19,7 +20,8 @@ const AddItem = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const payload = { ...formData, rollNo: generateUniqueRollNo(), barcode: LOCATION_BARCODE_MAP[formData.location] || 'UNKNOWN-LOC' };
+    // Payload now only sends item details and the unique rollNo
+    const payload = { ...formData, rollNo: generateUniqueRollNo() };
     try {
       await addItem(payload);
       setCreatedItem({ ...payload, date: new Date() });
@@ -42,7 +44,7 @@ const AddItem = () => {
         Object.keys(formData).forEach((key) => { if (row.hasOwnProperty(key)) filteredData[key] = row[key]; });
         if (Object.keys(filteredData).length > 0) {
           try {
-            await addItem({ ...filteredData, rollNo: generateUniqueRollNo(), barcode: LOCATION_BARCODE_MAP[filteredData.location] || 'UNKNOWN-LOC' });
+            await addItem({ ...filteredData, rollNo: generateUniqueRollNo() });
             successCount++;
           } catch (err) { console.error('Bulk upload error', err); }
         }
@@ -58,8 +60,8 @@ const AddItem = () => {
     return (
       <div className="max-w-lg mx-auto mt-20 p-8 bg-white rounded-3xl shadow-sm border border-gray-100 text-center">
         <CheckCircle size={48} className="text-emerald-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Item Added!</h2>
-        <p className="text-gray-500 mb-6">Your barcode is ready to print.</p>
+        <h2 className="text-2xl font-bold mb-2">Item Created!</h2>
+        <p className="text-gray-500 mb-6">Barcode label (Roll No) is ready to print.</p>
         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
           <BarcodeCard itemData={createdItem} />
         </div>
@@ -73,9 +75,9 @@ const AddItem = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-            <Package className="text-cyan-600" /> Add Inventory
+            <Package className="text-cyan-600" /> New Inventory Entry
           </h2>
-          <p className="text-gray-500 mt-1">Register new stock into the warehouse system.</p>
+          <p className="text-gray-500 mt-1">Register new stock. Location assignment happens during Scan.</p>
         </div>
         
         <label className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-gray-200 cursor-pointer hover:border-cyan-500 hover:text-cyan-600 transition-all shadow-sm">
@@ -103,7 +105,7 @@ const AddItem = () => {
           ))}
         </div>
         <button type="submit" disabled={loading} className="w-full mt-8 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2">
-          {loading ? 'Processing...' : <><PlusCircle size={20}/> Save & Generate Label</>}
+          {loading ? 'Generating Roll No...' : <><PlusCircle size={20}/> Save & Generate Roll No</>}
         </button>
       </form>
     </div>

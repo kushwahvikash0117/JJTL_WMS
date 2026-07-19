@@ -1,120 +1,104 @@
 import React, { useState } from 'react';
-import { getItemByBarcode, updateItem, removeItem } from '../api/itemService';
-import { Edit2, Trash2, X, Search, Package, Box, ChevronRight } from 'lucide-react';
+import { getItemByBarcode, getItemByElement, updateItem, entryItem, exitItem } from '../api/itemService';
+import { X, Search, Box, Save, LogIn, LogOut, Package } from 'lucide-react';
+import { LOCATION_BARCODE_MAP } from '../utils/constants';
 
 const ScanItem = () => {
-  const [barcode, setBarcode] = useState('');
+  const [query, setQuery] = useState('');
+  // Set default to 'element'
+  const [searchType, setSearchType] = useState('element'); 
   const [item, setItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newQty, setNewQty] = useState(0);
+  const [actionType, setActionType] = useState(null);
+  const [inputValue, setInputValue] = useState({});
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!barcode.trim()) return;
-    
+    if (!query) return;
     setLoading(true);
     try {
-      const { data } = await getItemByBarcode(barcode);
+      const { data } = searchType === 'rollNo' 
+        ? await getItemByBarcode(query) 
+        : await getItemByElement(query);
+      
       setItem(data);
-      setNewQty(data.qty);
+      setInputValue({ qty: data.qty });
       setShowModal(true);
-    } catch (err) {
-      alert("Item not found in database.");
-    } finally {
-      setLoading(false);
+    } catch (err) { 
+      alert("Item not found."); 
     }
+    finally { setLoading(false); }
   };
 
-  const handleUpdate = async () => {
+  const handleAction = async () => {
+    setLoading(true);
     try {
-      await updateItem(item._id, { qty: newQty });
-      alert("Quantity updated successfully!");
-      setShowModal(false);
-      setIsEditing(false);
-    } catch (err) { alert("Update failed"); }
-  };
+      if (actionType === 'ENTRY') {
+        const scannedInput = inputValue.bin;
+        const locationName = Object.keys(LOCATION_BARCODE_MAP).find(
+          (key) => LOCATION_BARCODE_MAP[key] === scannedInput
+        ) || scannedInput;
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to remove this item?")) {
-      try {
-        await removeItem(item._id);
-        alert("Item removed successfully");
-        setShowModal(false);
-      } catch (err) { alert("Failed to remove item"); }
+        await entryItem({ itemId: item._id, locationBarcode: scannedInput, locationName: locationName });
+      } else if (actionType === 'UPDATE') {
+        await updateItem(item._id, { qty: inputValue.qty });
+      } else if (actionType === 'EXIT') {
+        await exitItem({ itemId: item._id, batch: inputValue.batch });
+      }
+      
+      alert("Action successful!");
+      setShowModal(false);
+      setActionType(null);
+      setInputValue({});
+    } catch (err) { 
+      alert(err.response?.data?.error || "Action failed"); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
   return (
     <div className="max-w-md mx-auto p-4 sm:p-6">
-      <div className="mb-8">
-        <h2 className="text-2xl font-extrabold text-gray-900">Scan & Lookup</h2>
-        <p className="text-gray-500 text-sm">Enter barcode to manage inventory details.</p>
-      </div>
+      <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Scan Item</h2>
       
-      <form onSubmit={handleSearch} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center">
-        <input 
-          type="text" 
-          value={barcode}
-          onChange={(e) => setBarcode(e.target.value)}
-          className="flex-1 p-3 bg-transparent outline-none text-gray-700"
-          placeholder="Enter or scan barcode..."
-        />
-        <button type="submit" className="bg-cyan-600 text-white p-3 rounded-xl hover:bg-cyan-700 transition">
-          {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search size={20} />}
-        </button>
+      {/* Search Type Toggle */}
+      <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+        <button onClick={() => setSearchType('rollNo')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${searchType === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Roll No</button>
+        <button onClick={() => setSearchType('element')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${searchType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Element</button>
+      </div>
+
+      <form onSubmit={handleSearch} className="flex gap-2 mb-8">
+        <input className="flex-1 p-4 rounded-2xl border border-gray-200 outline-none focus:border-cyan-500" 
+          placeholder={`Scan ${searchType === 'rollNo' ? 'Roll No' : 'Element'}...`} 
+          value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button className="bg-cyan-600 text-white p-4 rounded-2xl"><Search size={20} /></button>
       </form>
 
       {showModal && item && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-cyan-600">
-                <Box size={20} /> Inventory Details
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+              <h3 className="font-bold text-gray-800 flex items-center gap-2"><Package size={20}/> {item.rollNo}</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400"><X size={20}/></button>
             </div>
 
-            {isEditing ? (
-              <div className="space-y-4">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Update Quantity</label>
-                <input 
-                  type="number" 
-                  value={newQty} 
-                  onChange={(e) => setNewQty(e.target.value)}
-                  className="w-full border-2 border-gray-100 p-4 rounded-2xl outline-none focus:border-cyan-500 font-bold text-lg" 
-                />
-                <button onClick={handleUpdate} className="w-full bg-cyan-600 text-white py-4 rounded-2xl font-bold hover:bg-cyan-700 transition">Save Changes</button>
+            {!actionType ? (
+              <div className="space-y-3">
+                <button onClick={() => setActionType('ENTRY')} className="w-full p-4 bg-emerald-50 text-emerald-700 rounded-2xl font-bold flex justify-between">Entry <LogIn size={20}/></button>
+                <button onClick={() => setActionType('UPDATE')} className="w-full p-4 bg-amber-50 text-amber-700 rounded-2xl font-bold flex justify-between">Update <Box size={20}/></button>
+                <button onClick={() => setActionType('EXIT')} className="w-full p-4 bg-rose-50 text-rose-700 rounded-2xl font-bold flex justify-between">Exit <LogOut size={20}/></button>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { label: 'Barcode', val: item.barcode },
-                    { label: 'Qty', val: item.qty },
-                    { label: 'Location', val: item.location },
-                    { label: 'Grade', val: item.grade },
-                    { label: 'Net Wt', val: item.netWeight },
-                    { label: 'Color', val: item.color }
-                  ].map((field, i) => (
-                    <div key={i} className="bg-gray-50 p-3 rounded-xl">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">{field.label}</p>
-                      <p className="font-semibold text-gray-800">{field.val}</p>
-                    </div>
-                  ))}
-                  <div className="col-span-2 bg-gray-50 p-3 rounded-xl">
-                     <p className="text-[10px] uppercase font-bold text-gray-400">Description</p>
-                     <p className="font-semibold text-gray-800 text-sm">{item.productDescription}</p>
-                  </div>
-                </div>
+              <div className="space-y-3">
+                {actionType === 'ENTRY' && <input placeholder="Scan Location Barcode" className="w-full p-3 border rounded-xl" onChange={(e) => setInputValue({bin: e.target.value})} />}
+                {actionType === 'UPDATE' && <input type="number" placeholder="New Quantity" className="w-full p-3 border rounded-xl" value={inputValue.qty || ''} onChange={(e) => setInputValue({qty: e.target.value})} />}
+                {actionType === 'EXIT' && <input placeholder="Batch ID" className="w-full p-3 border rounded-xl" onChange={(e) => setInputValue({batch: e.target.value})} />}
                 
-                <div className="flex gap-3 pt-2">
-                  <button onClick={() => setIsEditing(true)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-cyan-50 text-cyan-700 rounded-2xl font-bold hover:bg-cyan-100 transition">
-                    <Edit2 size={16}/> Edit
-                  </button>
-                  <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition">
-                    <Trash2 size={16}/> Delete
+                <div className="flex gap-2 pt-4">
+                  <button onClick={() => setActionType(null)} className="flex-1 p-3 bg-gray-100 rounded-xl font-bold">Back</button>
+                  <button onClick={handleAction} className="flex-1 p-3 bg-cyan-600 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+                    {loading ? '...' : <>Save <Save size={16}/></>}
                   </button>
                 </div>
               </div>

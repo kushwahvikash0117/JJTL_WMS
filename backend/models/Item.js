@@ -1,27 +1,29 @@
 import mongoose from 'mongoose';
 
 const itemSchema = new mongoose.Schema({
-  // Core fields from your new AddItem.jsx form
-  buyer: { type: String, required: true },
-  poNo: { type: String, required: true },
-  location: { type: String, required: true },
-  productDescription: { type: String },
-  lot: { type: String, required: true },
-  element: { type: String },
-  qty: { type: Number, required: true }, // Kgs
-  netWeight: { type: Number, required: true }, // Kgs
-  grossWeight: { type: Number, required: true }, // Kgs
-  length: { type: Number }, // cm
-  breadth: { type: Number }, // cm
-  height: { type: Number }, // cm
+  buyer: String, 
+  poNo: String, 
+  lot: String, 
+  element: String,
+  productDescription: String, 
+  qty: Number, 
+  netWeight: Number, 
+  grossWeight: Number, 
+  length: Number, 
+  breadth: Number, 
+  height: Number,
   
-  // System-generated fields
-  rollNo: { type: String, required: true, unique: true },
-  barcode: { type: String, required: true, index: true },
+  // Track batches where this roll has been issued
+  batches: String, 
   
-  // Tracking fields
-  date: { type: Date, default: Date.now },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rollNo: { type: String, required: true, unique: true }, // Used as Barcode
+  
+  // Location Tracking
+  currentBin: { type: mongoose.Schema.Types.ObjectId, ref: 'Bin', default: null },
+  locationBarcode: { type: String, default: null }, // Store the scanned barcode
+  locationName: { type: String, default: null },    // Store the human-readable name
+  
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
