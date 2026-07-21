@@ -1,18 +1,10 @@
-import axios from 'axios';
+import api from './axios';
 
-const API_URL = 'http://localhost:5005/api/logs';
-
-// Helper to get headers with the auth token
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  };
-};
-
-// Fetch all logs
-export const getLogs = async () => {
-  return await axios.get(API_URL, getAuthHeaders());
+/**
+ * Fetches all system logs.
+ * The 'api' instance handles the baseURL and the authorization headers
+ * (if you have configured an interceptor in your axios.js file).
+ */
+export const getLogs = () => {
+  return api.get('/logs');
 };
