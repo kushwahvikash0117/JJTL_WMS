@@ -20,8 +20,8 @@ const Warehouse = () => {
     } catch (err) { console.error(err); }
   };
 
-  const columns = ['buyer', 'poNo', 'rollNo', 'locationName', 'batches', 'qty', 'productDescription'];
-  const columnLabels = ['Buyer', 'PO No', 'Roll No', 'Loc', 'Batch', 'Qty', 'Description', 'Actions'];
+  const columns = ['buyer', 'poNo', 'element', 'locationName', 'batches', 'qty', 'productDescription'];
+  const columnLabels = ['Buyer', 'PO No', 'Element ID', 'Loc', 'Batch', 'Qty', 'Description', 'Actions'];
 
   const getUniqueValues = (column) => [...new Set(items.map(item => item[column]))].filter(Boolean);
 
