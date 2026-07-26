@@ -1,26 +1,70 @@
+/**
+ * @file itemService.js
+ * @description Frontend API service functions for managing inventory items, barcode scanning, entries, and exits.
+ */
+
 import api from './axios';
 
-// Add new item
+/**
+ * Adds a new item to the inventory.
+ * 
+ * @param {Object} itemData - Data object containing the details of the item to be added
+ * @returns {Promise<Object>} Axios response object
+ */
 export const addItem = (itemData) => api.post('/items', itemData);
 
-// Get all items (for Warehouse view)
+/**
+ * Retrieves all items currently registered in the warehouse inventory.
+ * 
+ * @returns {Promise<Object>} Axios response object containing the list of items
+ */
 export const getAllItems = () => api.get('/items');
 
-// Get item by Roll No (Barcode)
+/**
+ * Retrieves a specific item by scanning or searching its barcode (Roll No).
+ * 
+ * @param {string} barcode - The barcode identifier of the item
+ * @returns {Promise<Object>} Axios response object containing item details
+ */
 export const getItemByBarcode = (barcode) => api.get(`/items/barcode/${barcode}`);
 
-
+/**
+ * Retrieves items matching a specific structural or categorical element.
+ * 
+ * @param {string} element - The element identifier to filter by
+ * @returns {Promise<Object>} Axios response object containing matching items
+ */
 export const getItemByElement = (element) => api.get(`/items/element/${element}`);
 
-// Link item to a bin
+/**
+ * Links an inventory item to a storage bin or location (Entry operation).
+ * 
+ * @param {Object} payload - Object containing item and target bin/location mapping identifiers
+ * @returns {Promise<Object>} Axios response object
+ */
 export const entryItem = (payload) => api.post('/items/entry', payload);
 
-// Update Qty and Batch
+/**
+ * Updates an existing item's quantity, batch, or general properties.
+ * 
+ * @param {string} id - The unique MongoDB identifier of the item
+ * @param {Object} itemData - Updated properties for the item
+ * @returns {Promise<Object>} Axios response object
+ */
 export const updateItem = (id, itemData) => api.put(`/items/${id}`, itemData);
 
-// Exit/De-link item from bin
+/**
+ * Processes an item exit or de-links it from its current storage bin.
+ * 
+ * @param {Object} payload - Object detailing the exit specifications and quantities
+ * @returns {Promise<Object>} Axios response object
+ */
 export const exitItem = (payload) => api.post('/items/exit', payload);
 
-// Note: If you still need the direct delete function for administrative purposes,
-// you can keep this, but standard workflow should now use exitItem.
+/**
+ * Permanently removes an item record from the database (administrative use).
+ * 
+ * @param {string} id - The unique MongoDB identifier of the item to delete
+ * @returns {Promise<Object>} Axios response object
+ */
 export const removeItem = (id) => api.delete(`/items/${id}`);

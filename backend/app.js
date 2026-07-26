@@ -1,3 +1,8 @@
+/**
+ * @file app.js
+ * @description Configures the Express application, middleware, routes, and error handling.
+ */
+
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
@@ -9,23 +14,23 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// Middleware
+// Core Middleware
 app.use(cors());
 app.use(express.json());
 
-// API Routes
+// API Route Endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/bins', binRoutes);
 
-// Health Check
+// Health Check Endpoint
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'JJTL Warehouse Management System API is healthy' });
 });
 
-// Centralized Error Handling
+// Centralized Error Handling Middleware
 app.use(errorHandler);
 
 export default app;

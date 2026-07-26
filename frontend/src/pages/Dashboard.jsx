@@ -1,9 +1,45 @@
-import React, { useEffect, useState } from 'react';
+/**
+ * @file Dashboard.jsx
+ * @description React component rendering the warehouse overview analytics dashboard with Chart.js statistics and metrics.
+ */
+
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats } from '../api/dashboardService';
 import { getLogs } from '../api/logService';
-import { Package, TrendingUp, AlertTriangle, Users, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Package, Clock, CheckCircle2, Scale, LayoutDashboard, BarChart2, PieChart } from 'lucide-react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+/**
+ * Dashboard Component
+ * 
+ * @returns {JSX.Element} The rendered Dashboard component
+ */
 const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ totalItems: 0, activePO: 0, lowStockAlerts: 0, systemUsers: 0 });
@@ -15,13 +51,157 @@ const Dashboard = () => {
       try {
         const [statsRes, logsRes] = await Promise.all([getDashboardStats(), getLogs()]);
         setStats(statsRes.data);
-        setLogs(logsRes.data.slice(0, 5));
-      } catch (err) { console.error('Failed to fetch dashboard data', err); }
-      finally { setLoading(false); }
+        setLogs(logsRes.data);
+      } catch (err) { 
+        console.error('Failed to fetch dashboard data', err); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchData();
   }, []);
 
+  /**
+   * Normalizes action names into four core categories: Allocate, Add, Exit, Update.
+   * 
+   * @param {string} rawAction - The raw action string from the log
+   * @returns {string|null} Normalized action name or null
+   */
+  const normalizeAction = (rawAction) => {
+    const action = (rawAction || '').toUpperCase();
+    if (action === 'ADD' || action === 'IN') return 'Add';
+    if (action === 'EXIT' || action === 'OUT') return 'Exit';
+    if (action === 'ALLOCATE') return 'Allocate';
+    if (action === 'UPDATE') return 'Update';
+    return null;
+  };
+
+  // Calculate dynamic values for the 4 updated stat fields
+  const customStats = useMemo(() => {
+    const totalItems = stats.totalItems || 0;
+    
+    // Upcoming Items: count of unique items/logs where location and batch are null/empty
+    const upcomingItemsCount = logs.filter((log) => {
+      const item = log.itemId;
+      if (!item) return false;
+      const hasNullLocation = !item.locationName && !item.locationId;
+      const hasNullBatch = !item.batch && !item.batchNo;
+      return hasNullLocation && hasNullBatch;
+    }).length;
+
+    // Items Issued Today (Count of 'Exit' or 'OUT' logs created today)
+    const todayStr = new Date().toDateString();
+    const issuedToday = logs.filter((log) => {
+      const isExit = (log.action || '').toUpperCase() === 'EXIT' || (log.action || '').toUpperCase() === 'OUT';
+      const isToday = log.createdAt && new Date(log.createdAt).toDateString() === todayStr;
+      return isExit && isToday;
+    }).length;
+
+    // Total KGs of items: sum up quantities or weight fields from logs/items
+    let totalKgs = 0;
+    logs.forEach((log) => {
+      const qty = log.itemId?.qty;
+      if (qty && typeof qty === 'number') {
+        totalKgs += qty;
+      }
+    });
+
+    return {
+      totalItems,
+      upcomingItems: upcomingItemsCount,
+      issuedToday,
+      totalKgs: `${totalKgs.toLocaleString()} KG`,
+    };
+  }, [stats, logs]);
+
+  // Process data for Buyer Bar Chart (Top 5 Buyers count)
+  const buyerChartData = useMemo(() => {
+    const buyerCounts = {};
+    logs.forEach((log) => {
+      const buyer = log.itemId?.buyer;
+      if (buyer && buyer !== '-') {
+        buyerCounts[buyer] = (buyerCounts[buyer] || 0) + 1;
+      }
+    });
+
+    const sortedBuyers = Object.entries(buyerCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      labels: sortedBuyers.map(([buyer]) => buyer),
+      datasets: [
+        {
+          label: 'Logs Count by Buyer',
+          data: sortedBuyers.map(([, count]) => count),
+          backgroundColor: 'rgba(8, 145, 178, 0.8)',
+          borderRadius: 8,
+        },
+      ],
+    };
+  }, [logs]);
+
+  // Process data for Action Type Doughnut Chart (Only Allocate, Add, Exit, Update)
+  const actionChartData = useMemo(() => {
+    const actionCounts = { Allocate: 0, Add: 0, Exit: 0, Update: 0 };
+    
+    logs.forEach((log) => {
+      const normalized = normalizeAction(log.action);
+      if (normalized && actionCounts[normalized] !== undefined) {
+        actionCounts[normalized] += 1;
+      }
+    });
+
+    return {
+      labels: Object.keys(actionCounts),
+      datasets: [
+        {
+          data: Object.values(actionCounts),
+          backgroundColor: [
+            '#F59E0B', // Amber (Allocate)
+            '#10B981', // Emerald (Add)
+            '#EF4444', // Rose (Exit)
+            '#0EA5E9', // Sky (Update)
+          ],
+          borderWidth: 0,
+        },
+      ],
+    };
+  }, [logs]);
+
+  // Process data for Timeline Line Chart showing ALL dates with horizontal scroll container
+  const timelineChartData = useMemo(() => {
+    const dateCounts = {};
+    logs.forEach((log) => {
+      if (!log.createdAt) return;
+      const dateStr = new Date(log.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+      dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
+    });
+
+    const sortedDates = Object.entries(dateCounts).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+    return {
+      labels: sortedDates.map(([date]) => date),
+      datasets: [
+        {
+          label: 'Activity Trend',
+          data: sortedDates.map(([, count]) => count),
+          borderColor: '#0891B2',
+          backgroundColor: 'rgba(8, 145, 178, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+        },
+      ],
+    };
+  }, [logs]);
+
+  /**
+   * Reusable Stat Card component.
+   * 
+   * @param {Object} props - Card properties
+   * @returns {JSX.Element} Stat card element
+   */
   const StatCard = ({ title, value, icon, color, bgColor }) => (
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300">
       <div className={`p-4 rounded-2xl ${bgColor} ${color}`}>{icon}</div>
@@ -34,55 +214,110 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-cyan-600 p-2 rounded-xl text-white"><LayoutDashboard size={24}/></div>
-        <h1 className="text-2xl font-bold text-gray-800">Warehouse Overview</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Warehouse Overview & Analytics</h1>
       </div>
 
+      {/* Top Stat Cards */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
           {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-white rounded-3xl shadow-sm" />)}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Total Items" value={stats.totalItems} icon={<Package size={24} />} color="text-blue-600" bgColor="bg-blue-50" />
-          <StatCard title="Active P.O." value={stats.activePO} icon={<TrendingUp size={24} />} color="text-green-600" bgColor="bg-green-50" />
-          <StatCard title="Low Stock" value={stats.lowStockAlerts} icon={<AlertTriangle size={24} />} color="text-red-600" bgColor="bg-red-50" />
-          <StatCard title="Users" value={stats.systemUsers} icon={<Users size={24} />} color="text-purple-600" bgColor="bg-purple-50" />
+          <StatCard title="Total Items" value={customStats.totalItems} icon={<Package size={24} />} color="text-blue-600" bgColor="bg-blue-50" />
+          <StatCard title="Upcoming Items" value={customStats.upcomingItems} icon={<Clock size={24} />} color="text-amber-600" bgColor="bg-amber-50" />
+          <StatCard title="Items Issued Today" value={customStats.issuedToday} icon={<CheckCircle2 size={24} />} color="text-emerald-600" bgColor="bg-emerald-50" />
+          <StatCard title="Total KGs of Items" value={customStats.totalKgs} icon={<Scale size={24} />} color="text-purple-600" bgColor="bg-purple-50" />
         </div>
       )}
 
-      <div className="mt-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-gray-800">Recent Activity</h2>
-          <button onClick={() => navigate('/logs')} className="flex items-center gap-2 text-sm text-cyan-600 font-semibold hover:gap-3 transition-all">
-            View History <ArrowRight size={16} />
-          </button>
-        </div>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         
-        <div className="space-y-4">
-          {logs.map((log) => (
-            <div key={log._id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl hover:bg-cyan-50/30 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className={`w-2 h-2 rounded-full ${log.action === 'IN' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <div>
-                  <p className="text-sm font-bold text-gray-800">{log.performedBy?.name || 'System'}</p>
-                  <p className="text-xs text-gray-500 font-mono">{log.itemId?.rollNo || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                  log.action === 'IN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {log.action}
-                </span>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-          ))}
+        {/* Bar Graph: Buyer Count Distribution */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+              <BarChart2 size={18} className="text-cyan-600" /> Top Buyers Activity Count
+            </h2>
+          </div>
+          <div className="h-72 flex items-center justify-center">
+            {loading ? (
+              <span className="text-gray-400 text-sm animate-pulse">Loading chart data...</span>
+            ) : (
+              <Bar 
+                data={buyerChartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+                    x: { grid: { display: false } }
+                  }
+                }} 
+              />
+            )}
+          </div>
         </div>
+
+        {/* Doughnut Chart: Actions Breakdown (Allocate, Add, Exit, Update) */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+              <PieChart size={18} className="text-cyan-600" /> Operation Types
+            </h2>
+            <p className="text-xs text-gray-400">Allocate, Add, Exit, Update</p>
+          </div>
+          <div className="h-64 flex items-center justify-center">
+            {loading ? (
+              <span className="text-gray-400 text-sm animate-pulse">Loading chart...</span>
+            ) : (
+              <Doughnut 
+                data={actionChartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                  }
+                }} 
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Line Chart: Activity Trend Over All Dates with Horizontal Scroll */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 lg:col-span-3 flex flex-col justify-between">
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-800">Activity Trend</h2>
+            <p className="text-xs text-gray-400">Scroll horizontally to view complete timeline history</p>
+          </div>
+          <div className="w-full overflow-x-auto pb-2">
+            <div className="min-w-[800px] h-64 flex items-center justify-center">
+              {loading ? (
+                <span className="text-gray-400 text-sm animate-pulse">Loading trend...</span>
+              ) : (
+                <Line 
+                  data={timelineChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      y: { grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+                      x: { grid: { display: false } }
+                    }
+                  }} 
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

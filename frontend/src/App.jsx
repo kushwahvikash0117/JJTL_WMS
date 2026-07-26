@@ -1,3 +1,8 @@
+/**
+ * @file App.jsx
+ * @description Main entry point and router configuration for the JJTL WMS client application, handling layout wrappers, public and protected routes, and authentication guards.
+ */
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -10,14 +15,20 @@ import AddItem from './pages/AddItem';
 import ScanItem from './pages/ScanItem';
 import Logs from './pages/Logs';
 import Settings from './pages/Settings';
+import InventoryDigitalView from './pages/InventoryDigitalView';
 
 // Layout Components
 import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 
-// This wrapper handles the Navbar visibility and Auth protection
-// ... (imports remain the same)
-
+/**
+ * ProtectedLayout Component
+ * Wraps protected routes with the persistent Navbar and verifies authentication status.
+ * 
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to render inside the layout
+ * @returns {JSX.Element} The rendered layout or a redirect to login
+ */
 const ProtectedLayout = ({ children }) => {
   const token = localStorage.getItem('token');
   
@@ -42,8 +53,12 @@ const ProtectedLayout = ({ children }) => {
   );
 };
 
-// ... (Rest of the App component remains the same)
-
+/**
+ * App Component
+ * Configures the primary router, scroll management, and route mapping.
+ * 
+ * @returns {JSX.Element} The rendered App router
+ */
 const App = () => {
   return (
     <Router>
@@ -61,6 +76,7 @@ const App = () => {
         <Route path="/scan" element={<ProtectedLayout><ScanItem /></ProtectedLayout>} />
         <Route path="/logs" element={<ProtectedLayout><Logs /></ProtectedLayout>} />
         <Route path="/settings" element={<ProtectedLayout><Settings /></ProtectedLayout>} />
+        <Route path="/inventory-digital-view" element={<ProtectedLayout><InventoryDigitalView /></ProtectedLayout>} />
         
         {/* Catch-all for 404 */}
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,3 +1,11 @@
+/**
+ * @file validationMiddleware.js
+ * @description Middleware functions to validate incoming request payloads for items and user registration.
+ */
+
+/**
+ * Validates that all required fields are present when creating or handling items.
+ */
 export const validateItem = (req, res, next) => {
   const { barcode, poNo, customer, qty, location } = req.body;
 
@@ -10,6 +18,9 @@ export const validateItem = (req, res, next) => {
   next();
 };
 
+/**
+ * Validates user registration details including required fields and password length.
+ */
 export const validateRegister = (req, res, next) => {
   const { name, email, password } = req.body;
 

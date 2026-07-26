@@ -1,20 +1,36 @@
+/**
+ * @file Settings.jsx
+ * @description React component handling user account configurations, secure password resets with multi-step OTP verification, and session termination for the JJTL WMS system.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Lock, X, Settings as SettingsIcon, ChevronRight, ShieldCheck } from 'lucide-react';
 import { sendOTP, verifyOTP, resetPassword } from '../api/authService';
 
+/**
+ * Settings Component
+ * 
+ * @returns {JSX.Element} The rendered Settings component
+ */
 const Settings = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ email: '', otp: '', password: '', confirmPassword: '' });
 
+  /**
+   * Clears authentication tokens and redirects the user to the login page.
+   */
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     navigate('/login');
   };
 
+  /**
+   * Handles multi-step password reset workflow: sending OTP, verifying OTP, and updating the password.
+   */
   const handlePasswordSubmit = async () => {
     if (step === 3 && formData.password !== formData.confirmPassword) return alert("Passwords don't match");
     try {

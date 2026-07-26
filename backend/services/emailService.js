@@ -1,23 +1,29 @@
+/**
+ * @file emailService.js
+ * @description Configures nodemailer transporter and provides a helper function to send emails.
+ */
+
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
-    // Adding this 'socketTimeout' and 'family' configuration
     socketTimeout: 10000, 
     connectionTimeout: 10000,
     auth: {
         user: process.env.EMAIL,
         pass: process.env.EMAIL_PASSWORD
     },
-    // This forces the use of IPv4, bypassing ENETUNREACH on IPv6 addresses
+    // Forces IPv4 to bypass ENETUNREACH issues on networks lacking IPv6 connectivity
     family: 4 
 });
 
 /**
- * Sends an email
- * @param {string} to - Recipient email
- * @param {string} subject - Email subject
+ * Sends an HTML email to the specified recipient.
+ * 
+ * @param {string} to - Recipient email address
+ * @param {string} subject - Email subject line
  * @param {string} body - The HTML content of the email
+ * @returns {Promise<Object>} The mail transport response information
  */
 export const sendEmail = async (to, subject, body) => {
     try {
@@ -25,7 +31,7 @@ export const sendEmail = async (to, subject, body) => {
             from: `"JJTL Warehouse System" <${process.env.EMAIL}>`,
             to,
             subject,
-            html: body // Change 'text' to 'html' to render tags correctly
+            html: body
         });
 
         console.log('Email sent:', info.messageId);

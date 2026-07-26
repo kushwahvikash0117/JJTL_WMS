@@ -1,9 +1,16 @@
+/**
+ * @file otpService.js
+ * @description Service module for generating and dispatching OTP verification emails.
+ */
+
 import { sendEmail } from './emailService.js';
 
 /**
- * Sends an OTP via email
- * @param {string} email - Recipient email
+ * Sends a One-Time Password (OTP) verification email to the user.
+ * 
+ * @param {string} email - Recipient email address
  * @param {string} otp - The generated OTP code
+ * @returns {Promise<void>}
  */
 export const sendOTPEmail = async (email, otp) => {
   const subject = "JJTL Warehouse Management System - Verification Code";

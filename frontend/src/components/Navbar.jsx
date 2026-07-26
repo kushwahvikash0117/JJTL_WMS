@@ -1,7 +1,17 @@
+/**
+ * @file Navbar.jsx
+ * @description Responsive navigation bar component for the JJTL WMS application.
+ */
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, Search, Package, PlusCircle, History, Settings } from 'lucide-react';
+import { Menu, X, LayoutDashboard, PlusCircle, ScanBarcode, Boxes, Monitor, FileText, Sliders } from 'lucide-react';
 
+/**
+ * Navbar Component
+ * 
+ * @returns {JSX.Element} The rendered Navbar component
+ */
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -9,10 +19,11 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Add Item', path: '/add-item', icon: PlusCircle },
-    { name: 'Scan', path: '/scan', icon: Search },
-    { name: 'Inventory', path: '/inventory', icon: Package },
-    { name: 'Logs', path: '/logs', icon: History },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'Scan', path: '/scan', icon: ScanBarcode },
+    { name: 'Inventory', path: '/inventory', icon: Boxes },
+    { name: 'Inventory Digital View', path: '/inventory-digital-view', icon: Monitor },
+    { name: 'Logs', path: '/logs', icon: FileText },
+    { name: 'Settings', path: '/settings', icon: Sliders },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -24,8 +35,8 @@ const Navbar = () => {
           
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center">
-              <img src="/jj-logo.jpeg" alt="Logo" className="h-7 w-7 object-contain" />
+            <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center overflow-hidden">
+              <img src="/jj-logo.jpeg" alt="Logo" className="h-9 w-9 object-contain" />
             </div>
             <span className="text-xl font-extrabold tracking-tight text-white">JJTL <span className="text-cyan-400">WMS</span></span>
           </Link>
@@ -63,7 +74,7 @@ const Navbar = () => {
               to={link.path}
               onClick={() => setIsOpen(false)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold ${
-                isActive(link.path) ? 'bg-cyan-600 text-white' : 'text-gray-400'
+                isActive(link.path) ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
               <link.icon size={18} /> {link.name}

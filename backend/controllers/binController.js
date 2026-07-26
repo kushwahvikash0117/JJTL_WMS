@@ -1,14 +1,19 @@
+/**
+ * @file binController.js
+ * @description Handles bin creation, status checks, and bulk item assignments.
+ */
+
 import Bin from '../models/Bin.js';
 import Item from '../models/Item.js';
 import { binMapping } from '../config/binMapping.js';
 
-// CREATE/INITIALIZE BIN (Supports both manual creation and auto-init from mapping)
+/**
+ * Creates or initializes a new bin.
+ */
 export const createBin = async (req, res) => {
   try {
     const { locationBarcode, locationName } = req.body;
     
-    // Create the bin using the values provided by the request.
-    // If locationName is not provided, it falls back to a default format.
     const bin = await Bin.create({ 
       locationBarcode, 
       locationName: locationName || `Bin-${locationBarcode}` 
@@ -20,22 +25,21 @@ export const createBin = async (req, res) => {
   }
 };
 
-// GET BIN STATUS (Checks Mapping + Database)
+/**
+ * Fetches bin status from the database or mappings.
+ */
 export const getBinStatus = async (req, res) => {
   const { barcode } = req.params;
 
   try {
-    // 1. Try to find in DB
     let bin = await Bin.findOne({ locationBarcode: barcode }).populate('items');
 
-    // 2. If not found in DB, check if it's a valid "fixed" bin in mapping
     if (!bin && binMapping[barcode]) {
       bin = await Bin.create({
         locationBarcode: barcode,
         locationName: binMapping[barcode],
         items: []
       });
-      // Populate again after creation
       bin = await Bin.findById(bin._id).populate('items');
     }
 
@@ -51,17 +55,17 @@ export const getBinStatus = async (req, res) => {
   }
 };
 
-// ADD BULK ITEMS TO A BIN (Finds/Creates bin, then maps scanned items sequentially)
+/**
+ * Adds multiple items to a specified bin in bulk.
+ */
 export const addBulkItems = async (req, res) => {
   const { locationBarcode, locationName, itemIdentifiers } = req.body; 
-  // itemIdentifiers can be an array of scanned strings (rollNo, element, or barcode)
 
   try {
     if (!locationBarcode) {
       return res.status(400).json({ error: "Location barcode is required" });
     }
 
-    // 1. Find the location's bin, or create it if it doesn't exist
     let bin = await Bin.findOne({ locationBarcode });
 
     if (!bin) {
@@ -80,9 +84,7 @@ export const addBulkItems = async (req, res) => {
     const updatedItems = [];
     const failedItems = [];
 
-    // 2. Process items one by one
     for (const identifier of itemIdentifiers) {
-      // Find item by rollNo, element, barcode, or ObjectId
       let item = await Item.findOne({
         $or: [
           { rollNo: identifier }, 
@@ -97,12 +99,10 @@ export const addBulkItems = async (req, res) => {
         continue;
       }
 
-      // 3. Add item to bin's items array if not already present
       if (!bin.items.includes(item._id)) {
         bin.items.push(item._id);
       }
 
-      // 4. Update the item's info to contain the location's name and barcode
       item.locationBarcode = bin.locationBarcode;
       item.locationName = bin.locationName;
       await item.save();
@@ -110,7 +110,6 @@ export const addBulkItems = async (req, res) => {
       updatedItems.push(item);
     }
 
-    // Save the updated bin state
     await bin.save();
 
     res.status(200).json({

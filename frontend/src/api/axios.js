@@ -1,10 +1,15 @@
+/**
+ * @file axios.js
+ * @description Configures the centralized Axios client instance with base URL and automatic JWT bearer token injection.
+ */
+
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
-// Interceptor to attach JWT token to every request automatically
+// Request interceptor to automatically attach the JWT token to outgoing headers if present in localStorage
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

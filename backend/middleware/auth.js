@@ -1,5 +1,13 @@
+/**
+ * @file authMiddleware.js
+ * @description Middleware to authenticate requests using JSON Web Tokens (JWT).
+ */
+
 import jwt from 'jsonwebtoken';
 
+/**
+ * Authenticates incoming requests by validating the Bearer token in the Authorization header.
+ */
 export const auth = (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -9,7 +17,7 @@ export const auth = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attaches user ID to the request object
+    req.user = decoded; 
     next();
   } catch (err) {
     res.status(401).json({ error: "Invalid or expired token." });

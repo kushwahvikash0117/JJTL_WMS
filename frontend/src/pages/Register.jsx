@@ -1,8 +1,18 @@
+/**
+ * @file Register.jsx
+ * @description React component handling multi-step user registration with OTP verification for the JJTL WMS Enterprise Suite.
+ */
+
 import React, { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, User, Mail, ShieldCheck, Hash } from "lucide-react";
 
+/**
+ * Register Component
+ * 
+ * @returns {JSX.Element} The rendered Register component
+ */
 const Register = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -17,6 +27,14 @@ const Register = () => {
   const [formData, setFormData] = useState({ name: "", userId: "", password: "", confirmPassword: "" });
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
 
+  /**
+   * Handles asynchronous action requests for registration steps (Send OTP, Verify OTP, Register).
+   * 
+   * @param {Function} fn - API function/method
+   * @param {string} endpoint - API route endpoint
+   * @param {Object} data - Payload data
+   * @param {number|null} nextStep - Next step number or null if final
+   */
   const handleAction = async (fn, endpoint, data, nextStep) => {
     setLoading(true); setError(""); setMessage("");
     try {

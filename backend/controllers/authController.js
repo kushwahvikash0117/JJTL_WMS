@@ -1,15 +1,22 @@
+/**
+ * @file authController.js
+ * @description Handles user authentication (OTP, registration, login, password reset).
+ */
+
 import User from '../models/User.js';
 import OTP from '../models/OTP.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { sendOTPEmail } from '../services/otpService.js';
 
-// 1. SEND OTP
+/**
+ * Sends a 6-digit OTP to the user's email.
+ */
 export const sendOTP = async (req, res) => {
   try {
     const { email } = req.body;
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
     await OTP.findOneAndUpdate({ email }, { otp, expiresAt }, { upsert: true });
     await sendOTPEmail(email, otp);
@@ -20,7 +27,9 @@ export const sendOTP = async (req, res) => {
   }
 };
 
-// 2. VERIFY OTP
+/**
+ * Verifies the submitted OTP code.
+ */
 export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -36,28 +45,35 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
-// 3. REGISTER USER (After Verification)
+/**
+ * Registers a new user account after verification.
+ */
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, password: hashedPassword, isVerified: true });
+    await User.create({ name, email, password: hashedPassword, isVerified: true });
     
-    await OTP.deleteOne({ email }); // Clear OTP after registration
+    await OTP.deleteOne({ email }); // Clean up OTP
     res.status(201).json({ message: "Account created successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+/**
+ * Authenticates a user and returns a JWT token.
+ */
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, user: { name: user.name, email: user.email } });
   } catch (err) {
@@ -65,18 +81,14 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// 4. RESET PASSWORD (Change Password)
+/**
+ * Resets the user's password.
+ */
 export const resetPassword = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Check if the OTP was verified (Optional: Add a flag in OTP model or rely on session)
-    // Here we assume this is called after verifyOTP succeeds
-    
-    // 2. Hash the new password
     const hashedPassword = await bcrypt.hash(password, 12);
-
-    // 3. Update the user password
     const user = await User.findOneAndUpdate(
       { email }, 
       { password: hashedPassword },
@@ -87,9 +99,7 @@ export const resetPassword = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 4. Clear the OTP record after successful reset
-    await OTP.deleteOne({ email });
-
+    await OTP.deleteOne({ email }); // Clean up OTP
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });

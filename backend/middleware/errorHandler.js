@@ -1,3 +1,11 @@
+/**
+ * @file errorHandler.js
+ * @description Global error handling middleware for Express.
+ */
+
+/**
+ * Catches application errors, sets appropriate status codes, and returns error responses.
+ */
 export const errorHandler = (err, req, res, next) => {
   console.error(`[Error] ${err.message}`);
   
