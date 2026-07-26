@@ -1,12 +1,13 @@
 /**
  * @file Login.jsx
- * @description React component handling user authentication, sign-in, and the multi-step forgot password workflow matching the Settings reset password logic.
+ * @description React component handling user authentication, sign-in, and the multi-step forgot password workflow matching the Settings reset password logic, utilizing react-hot-toast.
  */
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, X, ShieldCheck } from 'lucide-react';
 import { login as loginApi, sendOTP, verifyOTP, resetPassword as resetPasswordApi } from '../api/authService';
+import toast from 'react-hot-toast';
 
 /**
  * Login Component
@@ -17,15 +18,12 @@ const Login = () => {
   const navigate = useNavigate();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
 
   // Forgot Password States (matching Settings.jsx logic)
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ email: '', otp: '', password: '', confirmPassword: '' });
-  const [forgotMessage, setForgotMessage] = useState("");
-  const [forgotError, setForgotError] = useState("");
 
   /**
    * Handles form submission for user authentication.
@@ -35,14 +33,14 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     try {
       const res = await loginApi(credentials);
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
+      toast.success('Login successful!');
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || "Invalid credentials.");
+      toast.error(err.response?.data?.error || "Invalid credentials.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +53,6 @@ const Login = () => {
     setShowModal(false);
     setStep(1);
     setFormData({ email: '', otp: '', password: '', confirmPassword: '' });
-    setForgotMessage("");
-    setForgotError("");
   };
 
   /**
@@ -64,32 +60,30 @@ const Login = () => {
    */
   const handlePasswordSubmit = async () => {
     if (step === 3 && formData.password !== formData.confirmPassword) {
-      setForgotError("Passwords don't match");
+      toast.error("Passwords don't match");
       return;
     }
 
     setLoading(true);
-    setForgotError("");
-    setForgotMessage("");
 
     try {
       if (step === 1) {
         await sendOTP(formData.email);
-        setForgotMessage("OTP sent successfully to your email.");
+        toast.success("OTP sent successfully to your email.");
         setStep(2);
       } else if (step === 2) {
         await verifyOTP(formData.email, formData.otp);
-        setForgotMessage("OTP verified successfully.");
+        toast.success("OTP verified successfully.");
         setStep(3);
       } else {
         await resetPasswordApi({ email: formData.email, password: formData.password });
-        setForgotMessage("Password updated successfully!");
+        toast.success("Password updated successfully!");
         setTimeout(() => {
           closeForgotPasswordModal();
-        }, 2000);
+        }, 1500);
       }
     } catch (err) {
-      setForgotError(err.response?.data?.error || "Operation failed.");
+      toast.error(err.response?.data?.error || "Operation failed.");
     } finally {
       setLoading(false);
     }
@@ -107,12 +101,6 @@ const Login = () => {
             <h1 className="text-2xl font-extrabold text-gray-900">Welcome Back</h1>
             <p className="text-gray-500 text-sm mt-1">Sign in to your JJTL account</p>
           </div>
-
-          {error && (
-            <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl mb-6 text-sm font-medium border border-rose-100">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
@@ -187,18 +175,6 @@ const Login = () => {
                 <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? 'bg-cyan-600' : 'bg-gray-100'}`} />
               ))}
             </div>
-
-            {forgotError && (
-              <div className="bg-rose-50 text-rose-600 p-3 rounded-xl mb-4 text-xs font-medium border border-rose-100">
-                {forgotError}
-              </div>
-            )}
-
-            {forgotMessage && (
-              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl mb-4 text-xs font-medium border border-emerald-100">
-                {forgotMessage}
-              </div>
-            )}
 
             <div className="space-y-4">
               {step === 1 && <input type="email" placeholder="Email Address" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500 text-sm" />}

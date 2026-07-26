@@ -107,9 +107,9 @@ const Dashboard = () => {
       const hasNullBatch = !item.batch && !item.batchNo;
 
       if (hasNotNullLocation && hasNullBatch) {
-        const qty = item.qty;
-        if (qty && typeof qty === 'number') {
-          totalKgs += qty;
+        const currentQuantity = item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty;
+        if (currentQuantity !== undefined && currentQuantity !== null && typeof Number(currentQuantity) === 'number' && !isNaN(Number(currentQuantity))) {
+          totalKgs += Number(currentQuantity);
         }
       }
     });

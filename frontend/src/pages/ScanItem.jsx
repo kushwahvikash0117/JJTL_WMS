@@ -1,6 +1,6 @@
 /**
  * @file ScanItem.jsx
- * @description React component for scanning and managing inventory items and bulk warehouse bin locations in the JJTL WMS system.
+ * @description React component for scanning and managing inventory items and bulk warehouse bin locations in the JJTL WMS system, utilizing react-hot-toast.
  */
 
 import React, { useState } from 'react';
@@ -8,6 +8,7 @@ import { getItemByBarcode, getItemByElement, updateItem, entryItem, exitItem } f
 import { addBulkItems } from '../api/binService';
 import { X, Search, Box, Save, LogIn, LogOut, Package, MapPin, Plus } from 'lucide-react';
 import { LOCATION_BARCODE_MAP } from '../utils/constants';
+import toast from 'react-hot-toast';
 
 /**
  * ScanItem Component
@@ -29,6 +30,20 @@ const ScanItem = () => {
   const [scannedIdentifiers, setScannedIdentifiers] = useState([]);
   const [currentItemCode, setCurrentItemCode] = useState('');
   const [bulkScanMode, setBulkScanMode] = useState('element');
+
+  /**
+   * Helper function to format numbers up to 2 decimal places if they are decimals.
+   * 
+   * @param {any} val - Value to format
+   * @returns {string|any} Formatted value
+   */
+  const formatNumber = (val) => {
+    if (typeof val === 'number' || (!isNaN(val) && val !== '' && val !== null && val !== undefined)) {
+      const num = Number(val);
+      return Number.isInteger(num) ? num : num.toFixed(2);
+    }
+    return val;
+  };
 
   /**
    * Handles search and location barcode resolution on form submission.
@@ -62,10 +77,11 @@ const ScanItem = () => {
         : await getItemByElement(query);
       
       setItem(data);
-      setInputValue({ qty: data.qty });
+      const currentQtyVal = data.currentQuantity !== undefined && data.currentQuantity !== null ? data.currentQuantity : (data.qty || 0);
+      setInputValue({ currentQuantity: currentQtyVal });
       setShowModal(true);
     } catch (err) { 
-      alert("Item not found."); 
+      toast.error("Item not found."); 
     } finally { 
       setLoading(false); 
     }
@@ -78,7 +94,7 @@ const ScanItem = () => {
     setLoading(true);
     try {
       if (actionType === 'ENTRY') {
-        const scannedInput = String(inputValue.bin).trim();
+        const scannedInput = String(inputValue.bin || '').trim();
         
         // Validate if location barcode exists in LOCATION_BARCODE_MAP
         const matchedLocation = Object.entries(LOCATION_BARCODE_MAP).find(
@@ -86,7 +102,7 @@ const ScanItem = () => {
         );
 
         if (!matchedLocation) {
-          alert("Location barcode invalid");
+          toast.error("Location barcode invalid");
           setLoading(false);
           setInputValue({ ...inputValue, bin: '' }); // Reset bin input to prompt scanning again
           return;
@@ -97,19 +113,19 @@ const ScanItem = () => {
         await entryItem({ itemId: item._id, locationBarcode: scannedInput, locationName: locationName });
       } else if (actionType === 'UPDATE') {
         await updateItem(item._id, { 
-          qty: inputValue.qty, 
+          currentQuantity: inputValue.currentQuantity, 
           batchNo: inputValue.batchNo 
         });
       } else if (actionType === 'EXIT') {
         await exitItem({ itemId: item._id, batch: inputValue.batch });
       }
       
-      alert("Action successful!");
+      toast.success("Action successful!");
       setShowModal(false);
       setActionType(null);
       setInputValue({});
     } catch (err) { 
-      alert(err.response?.data?.error || "Action failed"); 
+      toast.error(err.response?.data?.error || "Action failed"); 
     } finally { 
       setLoading(false); 
     }
@@ -123,7 +139,7 @@ const ScanItem = () => {
     if (!trimmedCode) return;
 
     if (scannedIdentifiers.includes(trimmedCode)) {
-      alert("This item is already added to the scan queue.");
+      toast.error("This item is already added to the scan queue.");
       setCurrentItemCode('');
       return;
     }
@@ -137,7 +153,7 @@ const ScanItem = () => {
    */
   const handleSaveAllBulk = async () => {
     if (scannedIdentifiers.length === 0) {
-      alert("Please scan at least one item.");
+      toast.error("Please scan at least one item.");
       return;
     }
     setLoading(true);
@@ -147,13 +163,13 @@ const ScanItem = () => {
         locationName: resolvedBin.name,
         itemIdentifiers: scannedIdentifiers
       });
-      alert("Bulk items mapped successfully!");
+      toast.success("Bulk items mapped successfully!");
       setShowModal(false);
       setScannedIdentifiers([]);
       setResolvedBin({ barcode: '', name: '' });
       setBulkStep('scanLocation');
     } catch (err) {
-      alert(err.response?.data?.error || "Bulk assignment failed");
+      toast.error(err.response?.data?.error || "Bulk assignment failed");
     } finally {
       setLoading(false);
     }
@@ -176,29 +192,29 @@ const ScanItem = () => {
       <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Scan Item</h2>
       
       <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl mb-4">
-        <button onClick={() => setSearchType('rollNo')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Roll No</button>
-        <button onClick={() => setSearchType('element')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Element</button>
-        <button onClick={() => setSearchType('bulkEntry')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'bulkEntry' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Bulk Location</button>
+        <button type="button" onClick={() => setSearchType('rollNo')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Roll No</button>
+        <button type="button" onClick={() => setSearchType('element')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Element</button>
+        <button type="button" onClick={() => setSearchType('bulkEntry')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'bulkEntry' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Bulk Location</button>
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-        <input className="flex-1 p-4 rounded-2xl border border-gray-200 outline-none focus:border-cyan-500" 
+        <input className="flex-1 p-4 rounded-2xl border border-gray-200 outline-none focus:border-cyan-500 text-sm" 
           placeholder={searchType === 'bulkEntry' ? 'Scan Location Barcode...' : `Scan ${searchType === 'rollNo' ? 'Roll No' : 'Element'}...`} 
           value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="bg-cyan-600 text-white p-4 rounded-2xl"><Search size={20} /></button>
+        <button type="submit" className="bg-cyan-600 text-white p-4 rounded-2xl hover:bg-cyan-700 transition"><Search size={20} /></button>
       </form>
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-100">
             
             {searchType === 'bulkEntry' ? (
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <MapPin size={20} className="text-cyan-600"/> {resolvedBin.name}
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                    <MapPin size={18} className="text-cyan-600"/> {resolvedBin.name}
                   </h3>
-                  <button onClick={handleCloseModal} className="text-gray-400"><X size={20}/></button>
+                  <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
 
                 <p className="text-xs text-gray-500 mb-3">Location Barcode: <span className="font-mono font-semibold text-gray-700">{resolvedBin.barcode}</span></p>
@@ -225,7 +241,7 @@ const ScanItem = () => {
                     </label>
                     <input 
                       placeholder={`Scan ${bulkScanMode}...`} 
-                      className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 font-mono text-sm"
+                      className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 font-mono text-sm"
                       value={currentItemCode}
                       onChange={(e) => setCurrentItemCode(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScanNextItem(); }}}
@@ -233,7 +249,7 @@ const ScanItem = () => {
                   </div>
 
                   <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 max-h-36 overflow-y-auto">
-                    <div className="text-xs font-bold text-gray-500 mb-2 flex justify-between">
+                    <div className="text-xs font-bold text-gray-500 mb-2 flex justify-between items-center">
                       <span>Scanned Queue</span>
                       <span className="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full">{scannedIdentifiers.length} items</span>
                     </div>
@@ -252,16 +268,17 @@ const ScanItem = () => {
                   </div>
 
                   <div className="flex gap-2 pt-1">
-                    <button onClick={handleCloseModal} className="flex-1 p-3 bg-gray-100 rounded-xl font-bold text-sm text-gray-600">Back</button>
-                    <button onClick={handleScanNextItem} className="flex-1 p-3 bg-amber-50 text-amber-700 rounded-xl font-bold text-sm flex items-center justify-center gap-1">
+                    <button type="button" onClick={handleCloseModal} className="flex-1 p-3 bg-gray-100 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition">Back</button>
+                    <button type="button" onClick={handleScanNextItem} className="flex-1 p-3 bg-amber-50 text-amber-700 rounded-xl font-bold text-sm flex items-center justify-center gap-1 hover:bg-amber-100 transition">
                       Scan Next <Plus size={16}/>
                     </button>
                   </div>
                   
                   <button 
+                    type="button"
                     onClick={handleSaveAllBulk} 
                     disabled={loading || scannedIdentifiers.length === 0}
-                    className="w-full p-3 bg-cyan-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                    className="w-full p-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition shadow-lg shadow-cyan-600/20">
                     {loading ? 'Processing...' : <>Save All <Save size={16}/></>}
                   </button>
                 </div>
@@ -269,22 +286,22 @@ const ScanItem = () => {
             ) : (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-gray-800 flex items-center gap-2"><Package size={20}/> {item?.rollNo}</h3>
-                  <button onClick={handleCloseModal} className="text-gray-400"><X size={20}/></button>
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm"><Package size={18}/> {item?.rollNo}</h3>
+                  <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
 
                 {!actionType ? (
                   <div className="space-y-3">
-                    <button onClick={() => setActionType('ENTRY')} className="w-full p-4 bg-emerald-50 text-emerald-700 rounded-2xl font-bold flex justify-between items-center">Entry <LogIn size={20}/></button>
-                    <button onClick={() => setActionType('UPDATE')} className="w-full p-4 bg-amber-50 text-amber-700 rounded-2xl font-bold flex justify-between items-center">Update <Box size={20}/></button>
-                    <button onClick={() => setActionType('EXIT')} className="w-full p-4 bg-rose-50 text-rose-700 rounded-2xl font-bold flex justify-between items-center">Exit <LogOut size={20}/></button>
+                    <button type="button" onClick={() => setActionType('ENTRY')} className="w-full p-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-2xl font-bold text-sm flex justify-between items-center transition">Entry <LogIn size={18}/></button>
+                    <button type="button" onClick={() => setActionType('UPDATE')} className="w-full p-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl font-bold text-sm flex justify-between items-center transition">Update <Box size={18}/></button>
+                    <button type="button" onClick={() => setActionType('EXIT')} className="w-full p-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl font-bold text-sm flex justify-between items-center transition">Exit <LogOut size={18}/></button>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {actionType === 'ENTRY' && (
                       <input 
                         placeholder="Scan Location Barcode" 
-                        className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" 
+                        className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" 
                         value={inputValue.bin || ''}
                         onChange={(e) => setInputValue({bin: e.target.value})} 
                       />
@@ -293,26 +310,28 @@ const ScanItem = () => {
                     {actionType === 'UPDATE' && (
                       <div className="space-y-2.5">
                         <div className="bg-cyan-50 p-2.5 rounded-xl border border-cyan-100 text-xs text-cyan-800 mb-1">
-                          Current Quantity: <span className="font-bold">{item?.qty || 0}</span>
+                          Current Quantity: <span className="font-bold">
+                            {formatNumber(item?.currentQuantity !== undefined && item?.currentQuantity !== null ? item.currentQuantity : (item?.qty || 0))}
+                          </span>
                         </div>
                         <div>
                           <label className="text-[11px] font-bold text-gray-500 block mb-1">New Total Quantity</label>
-                          <input type="number" placeholder="New Quantity" className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.qty || ''} onChange={(e) => setInputValue({...inputValue, qty: e.target.value})} />
+                          <input type="number" step="any" placeholder="New Quantity" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.currentQuantity || ''} onChange={(e) => setInputValue({...inputValue, currentQuantity: e.target.value})} />
                         </div>
                         <div>
                           <label className="text-[11px] font-bold text-gray-500 block mb-1">Batch Number</label>
-                          <input placeholder="Batch No" className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.batchNo || ''} onChange={(e) => setInputValue({...inputValue, batchNo: e.target.value})} />
+                          <input placeholder="Batch No" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.batchNo || ''} onChange={(e) => setInputValue({...inputValue, batchNo: e.target.value})} />
                         </div>
                       </div>
                     )}
 
                     {actionType === 'EXIT' && (
-                      <input placeholder="Batch ID" className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" onChange={(e) => setInputValue({batch: e.target.value})} />
+                      <input placeholder="Batch ID" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" onChange={(e) => setInputValue({batch: e.target.value})} />
                     )}
                     
                     <div className="flex gap-2 pt-4">
-                      <button onClick={() => setActionType(null)} className="flex-1 p-3 bg-gray-100 rounded-xl font-bold text-sm text-gray-600">Back</button>
-                      <button onClick={handleAction} className="flex-1 p-3 bg-cyan-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => setActionType(null)} className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm text-gray-600 transition">Back</button>
+                      <button type="button" onClick={handleAction} disabled={loading} className="flex-1 p-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-cyan-600/20">
                         {loading ? '...' : <>Save <Save size={16}/></>}
                       </button>
                     </div>

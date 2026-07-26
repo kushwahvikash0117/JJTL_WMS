@@ -1,12 +1,13 @@
 /**
  * @file Settings.jsx
- * @description React component handling user account configurations, secure password resets with multi-step OTP verification, and session termination for the JJTL WMS system.
+ * @description React component handling user account configurations, secure password resets with multi-step OTP verification, and session termination for the JJTL WMS system, utilizing react-hot-toast.
  */
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Lock, X, Settings as SettingsIcon, ChevronRight, ShieldCheck } from 'lucide-react';
 import { sendOTP, verifyOTP, resetPassword } from '../api/authService';
+import toast from 'react-hot-toast';
 
 /**
  * Settings Component
@@ -17,6 +18,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: '', otp: '', password: '', confirmPassword: '' });
 
   /**
@@ -25,6 +27,7 @@ const Settings = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
+    toast.success("Logged out successfully");
     navigate('/login');
   };
 
@@ -32,17 +35,44 @@ const Settings = () => {
    * Handles multi-step password reset workflow: sending OTP, verifying OTP, and updating the password.
    */
   const handlePasswordSubmit = async () => {
-    if (step === 3 && formData.password !== formData.confirmPassword) return alert("Passwords don't match");
+    if (step === 3 && formData.password !== formData.confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (step === 1) { await sendOTP(formData.email); setStep(2); }
-      else if (step === 2) { await verifyOTP(formData.email, formData.otp); setStep(3); }
+      if (step === 1) { 
+        await sendOTP(formData.email); 
+        toast.success("OTP sent successfully to your email.");
+        setStep(2); 
+      }
+      else if (step === 2) { 
+        await verifyOTP(formData.email, formData.otp); 
+        toast.success("OTP verified successfully.");
+        setStep(3); 
+      }
       else {
         await resetPassword({ email: formData.email, password: formData.password });
-        alert("Password updated successfully!");
-        setShowModal(false); setStep(1);
+        toast.success("Password updated successfully!");
+        setShowModal(false); 
+        setStep(1);
         setFormData({ email: '', otp: '', password: '', confirmPassword: '' });
       }
-    } catch (err) { alert(err.response?.data?.error || "Operation failed."); }
+    } catch (err) { 
+      toast.error(err.response?.data?.error || "Operation failed."); 
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Closes the modal and resets the password reset form state.
+   */
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setStep(1);
+    setFormData({ email: '', otp: '', password: '', confirmPassword: '' });
   };
 
   return (
@@ -53,7 +83,7 @@ const Settings = () => {
       
       <div className="space-y-4">
         <div className="bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
-          <button onClick={() => setShowModal(true)} className="flex items-center justify-between w-full p-4 hover:bg-cyan-50/50 rounded-2xl transition group">
+          <button type="button" onClick={() => setShowModal(true)} className="flex items-center justify-between w-full p-4 hover:bg-cyan-50/50 rounded-2xl transition group">
             <div className="flex items-center gap-4">
               <div className="bg-cyan-100 p-3 rounded-xl text-cyan-600"><Lock size={20} /></div>
               <span className="font-semibold text-gray-800">Change Password</span>
@@ -62,7 +92,7 @@ const Settings = () => {
           </button>
         </div>
 
-        <button onClick={handleLogout} className="flex items-center gap-4 w-full p-4 hover:bg-rose-50 text-rose-600 rounded-2xl transition font-semibold">
+        <button type="button" onClick={handleLogout} className="flex items-center gap-4 w-full p-4 hover:bg-rose-50 text-rose-600 rounded-2xl transition font-semibold">
           <div className="bg-rose-100 p-3 rounded-xl"><LogOut size={20} /></div>
           Logout Account
         </button>
@@ -75,7 +105,7 @@ const Settings = () => {
               <h3 className="font-bold text-lg flex items-center gap-2 text-gray-800">
                 <ShieldCheck className="text-cyan-600" /> Reset Password
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+              <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
             </div>
             
             {/* Step Indicator */}
@@ -86,18 +116,51 @@ const Settings = () => {
             </div>
 
             <div className="space-y-4">
-              {step === 1 && <input type="email" placeholder="Email Address" onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500" />}
-              {step === 2 && <input type="text" placeholder="Enter 6-digit OTP" onChange={(e) => setFormData({...formData, otp: e.target.value})} className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500" />}
+              {step === 1 && (
+                <input 
+                  type="email" 
+                  placeholder="Email Address" 
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                  className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500 text-sm" 
+                />
+              )}
+              {step === 2 && (
+                <input 
+                  type="text" 
+                  placeholder="Enter 6-digit OTP" 
+                  maxLength={6}
+                  value={formData.otp}
+                  onChange={(e) => setFormData({...formData, otp: e.target.value})} 
+                  className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500 text-center text-xl tracking-[0.5em] font-mono" 
+                />
+              )}
               {step === 3 && (
                 <>
-                  <input type="password" placeholder="New Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500" />
-                  <input type="password" placeholder="Confirm Password" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500" />
+                  <input 
+                    type="password" 
+                    placeholder="New Password" 
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                    className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500 text-sm" 
+                  />
+                  <input 
+                    type="password" 
+                    placeholder="Confirm Password" 
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
+                    className="w-full border border-gray-200 p-4 rounded-2xl outline-none focus:border-cyan-500 text-sm" 
+                  />
                 </>
               )}
             </div>
             
-            <button onClick={handlePasswordSubmit} className="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-4 rounded-2xl transition font-bold shadow-lg shadow-cyan-600/20">
-              {step === 3 ? 'Update Password' : 'Continue'}
+            <button 
+              type="button" 
+              onClick={handlePasswordSubmit} 
+              disabled={loading}
+              className="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-4 rounded-2xl transition font-bold shadow-lg shadow-cyan-600/20 disabled:opacity-50">
+              {loading ? 'Processing...' : (step === 3 ? 'Update Password' : 'Continue')}
             </button>
           </div>
         </div>

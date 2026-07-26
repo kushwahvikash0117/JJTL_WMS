@@ -1,10 +1,11 @@
 /**
  * @file App.jsx
- * @description Main entry point and router configuration for the JJTL WMS client application, handling layout wrappers, public and protected routes, and authentication guards.
+ * @description Main entry point and router configuration for the JJTL WMS client application, handling layout wrappers, public and protected routes, authentication guards, and global toast notifications.
  */
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import Login from './pages/Login';
@@ -55,14 +56,15 @@ const ProtectedLayout = ({ children }) => {
 
 /**
  * App Component
- * Configures the primary router, scroll management, and route mapping.
+ * Configures the primary router, scroll management, global toast notifications, and route mapping.
  * 
  * @returns {JSX.Element} The rendered App router
  */
 const App = () => {
   return (
     <Router>
-      <ScrollToTop/>
+      <ScrollToTop />
+      <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Navigate to="/login" replace />} />

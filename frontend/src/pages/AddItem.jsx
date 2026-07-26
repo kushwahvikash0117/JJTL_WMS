@@ -1,6 +1,6 @@
 /**
  * @file AddItem.jsx
- * @description React component for adding new inventory items manually or via bulk spreadsheet uploads, with label preview support.
+ * @description React component for adding new inventory items manually or via bulk spreadsheet uploads, with label preview support and toast notifications.
  */
 
 import React, { useState } from 'react';
@@ -9,6 +9,7 @@ import RollBarcodeCard from '../components/RollBarcodeCard';
 import ElementBarcodeCard from '../components/ElementBarcodeCard';
 import * as XLSX from 'xlsx';
 import { Upload, PlusCircle, CheckCircle, Package } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 /**
  * Generates a unique roll number string using the current timestamp and a random suffix.
@@ -25,13 +26,14 @@ const generateUniqueRollNo = () => `RL-${Date.now()}-${Math.floor(Math.random() 
 const AddItem = () => {
   const [loading, setLoading] = useState(false);
   const [createdItem, setCreatedItem] = useState(null);
+  const [bulkProgress, setBulkProgress] = useState(null);
   
   // Toggle state to view either Roll No or Element barcode card option after creation
   const [cardType, setCardType] = useState('roll'); 
   
   const [formData, setFormData] = useState({
     buyer: '', poNo: '', productDescription: '', 
-    lot: '', element: '', qty: '', netWeight: '', 
+    lot: '', element: '', currentQuantity: '', netWeight: '', 
     grossWeight: '', length: '', breadth: '', height: ''
   });
 
@@ -46,46 +48,91 @@ const AddItem = () => {
     const payload = { ...formData, rollNo: generateUniqueRollNo() };
     try {
       await addItem(payload);
+      toast.success('Item added successfully!');
       setCreatedItem({ ...payload, date: new Date() });
     } catch (err) { 
-      alert(err.response?.data?.error || 'Failed to add item'); 
+      toast.error(err.response?.data?.error || 'Failed to add item'); 
     } finally { 
       setLoading(false); 
     }
   };
 
   /**
-   * Handles bulk spreadsheet file upload (.xlsx) for multi-item inventory ingestion.
+   * Handles bulk spreadsheet file upload (.xlsx) for multi-item inventory ingestion with robust validation.
    * 
    * @param {React.ChangeEvent<HTMLInputElement>} e - File input change event
    */
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const data = new Uint8Array(event.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-      setLoading(true);
-      let successCount = 0;
-      for (const row of jsonData) {
-        const filteredData = {};
-        Object.keys(formData).forEach((key) => { if (row.hasOwnProperty(key)) filteredData[key] = row[key]; });
-        if (Object.keys(filteredData).length > 0) {
-          try {
-            await addItem({ ...filteredData, rollNo: generateUniqueRollNo() });
-            successCount++;
-          } catch (err) { 
-            console.error('Bulk upload error', err); 
-          }
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          toast.error("The uploaded Excel file contains no sheets.");
+          return;
         }
+
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+        if (!jsonData || jsonData.length === 0) {
+          toast.error("The spreadsheet is empty.");
+          return;
+        }
+
+        setLoading(true);
+        setBulkProgress({ current: 0, total: jsonData.length });
+        
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          const filteredData = {};
+          
+          Object.keys(formData).forEach((key) => { 
+            // Handle mapping if spreadsheet uses 'qty' or 'currentQuantity'
+            const sourceKey = (key === 'currentQuantity' && !row.hasOwnProperty('currentQuantity') && row.hasOwnProperty('qty')) ? 'qty' : key;
+            
+            if (row.hasOwnProperty(sourceKey) && row[sourceKey] !== null && row[sourceKey] !== undefined && String(row[sourceKey]).trim() !== '') {
+              filteredData[key] = row[sourceKey]; 
+            } 
+          });
+
+          if (Object.keys(filteredData).length > 0) {
+            try {
+              await addItem({ ...filteredData, rollNo: generateUniqueRollNo() });
+              successCount++;
+            } catch (err) { 
+              console.error(`Bulk upload error at row ${i + 2}:`, err); 
+              failCount++;
+            }
+          } else {
+            failCount++;
+          }
+
+          setBulkProgress({ current: i + 1, total: jsonData.length });
+        }
+
+        setLoading(false);
+        setBulkProgress(null);
+        toast.success(`Bulk upload complete! Added: ${successCount}, Failed/Skipped: ${failCount}`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } catch (error) {
+        console.error("Error parsing spreadsheet:", error);
+        toast.error("Failed to parse the Excel file. Please ensure it is a valid .xlsx format.");
+        setLoading(false);
+        setBulkProgress(null);
       }
-      setLoading(false);
-      alert(`Bulk upload complete. ${successCount} items added.`);
-      window.location.reload();
     };
     reader.readAsArrayBuffer(file);
+    e.target.value = '';
   };
 
   if (createdItem) {
@@ -136,9 +183,12 @@ const AddItem = () => {
           <p className="text-gray-500 mt-1">Register new stock. Location assignment happens during Scan.</p>
         </div>
         
-        <label className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-gray-200 cursor-pointer hover:border-cyan-500 hover:text-cyan-600 transition-all shadow-sm">
-          <Upload size={18} /> <span className="font-semibold text-sm">Bulk Upload (.xlsx)</span>
-          <input type="file" accept=".xlsx" onChange={handleFileUpload} className="hidden" />
+        <label className={`flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-gray-200 shadow-sm transition-all ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-cyan-500 hover:text-cyan-600'}`}>
+          <Upload size={18} /> 
+          <span className="font-semibold text-sm">
+            {bulkProgress ? `Uploading (${bulkProgress.current}/${bulkProgress.total})...` : 'Bulk Upload (.xlsx)'}
+          </span>
+          <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={loading} className="hidden" />
         </label>
       </div>
       
@@ -150,7 +200,8 @@ const AddItem = () => {
                 {field.replace(/([A-Z])/g, ' $1')}
               </label>
               <input
-                type={['qty', 'netWeight', 'grossWeight', 'length', 'breadth', 'height'].includes(field) ? 'number' : 'text'}
+                type={['currentQuantity', 'netWeight', 'grossWeight', 'length', 'breadth', 'height'].includes(field) ? 'number' : 'text'}
+                step={['currentQuantity'].includes(field) ? 'any' : '0.01'}
                 name={field}
                 value={formData[field]}
                 onChange={(e) => setFormData({...formData, [field]: e.target.value})}
@@ -160,8 +211,8 @@ const AddItem = () => {
             </div>
           ))}
         </div>
-        <button type="submit" disabled={loading} className="w-full mt-8 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2">
-          {loading ? 'Generating Roll No...' : <><PlusCircle size={20}/> Save & Generate Labels</>}
+        <button type="submit" disabled={loading} className="w-full mt-8 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2 disabled:opacity-50">
+          {loading ? 'Processing...' : <><PlusCircle size={20}/> Save & Generate Labels</>}
         </button>
       </form>
     </div>

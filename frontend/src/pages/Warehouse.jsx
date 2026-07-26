@@ -534,9 +534,14 @@ const Warehouse = () => {
               {/* 1. Added to Packing List */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">1. Packing List Entry</span>
-                <p className="font-bold text-gray-800 text-sm">
-                  {historyItem.createdAt ? new Date(historyItem.createdAt).toLocaleString() : 'N/A'}
-                </p>
+                <div className="flex justify-between items-center">
+                  <p className="font-bold text-gray-800 text-sm">
+                    {historyItem.createdAt ? new Date(historyItem.createdAt).toLocaleString() : 'N/A'}
+                  </p>
+                  <span className="font-extrabold text-cyan-600 text-sm">
+                    Original Qty: {formatNumber(historyItem.initialQuantity !== undefined ? historyItem.initialQuantity : historyItem.qty)} Kg
+                  </span>
+                </div>
               </div>
 
               {/* 2. Location Allocated */}
@@ -554,7 +559,7 @@ const Warehouse = () => {
 
               {/* 3. Update History List */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
-                <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-2">3. Scan / Update History (Issued / Gone Qty)</span>
+                <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-2">3. Update History</span>
                 {historyItem.updateHistory && historyItem.updateHistory.length > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {historyItem.updateHistory.map((upd, index) => (
@@ -577,7 +582,12 @@ const Warehouse = () => {
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">4. Exit Details</span>
                 {historyItem.exitDetails && historyItem.exitDetails.timestamp ? (
                   <div>
-                    <p className="font-bold text-gray-800 text-sm">{new Date(historyItem.exitDetails.timestamp).toLocaleString()}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="font-bold text-gray-800 text-sm">{new Date(historyItem.exitDetails.timestamp).toLocaleString()}</p>
+                      <span className="font-extrabold text-rose-600 text-sm">
+                        Exited Qty: {formatNumber(historyItem.currentQuantity)} Kg
+                      </span>
+                    </div>
                     <p className="text-rose-600 font-semibold mt-0.5">Exit Batch No: {historyItem.exitDetails.batchNo || 'N/A'}</p>
                   </div>
                 ) : (

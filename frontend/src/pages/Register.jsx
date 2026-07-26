@@ -1,12 +1,13 @@
 /**
  * @file Register.jsx
- * @description React component handling multi-step user registration with OTP verification for the JJTL WMS Enterprise Suite.
+ * @description React component handling multi-step user registration with OTP verification for the JJTL WMS Enterprise Suite, utilizing react-hot-toast.
  */
 
 import React, { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, User, Mail, ShieldCheck, Hash } from "lucide-react";
+import { Eye, EyeOff, Lock, User, Mail, Hash } from "lucide-react";
+import toast from 'react-hot-toast';
 
 /**
  * Register Component
@@ -19,8 +20,6 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
 
@@ -36,13 +35,30 @@ const Register = () => {
    * @param {number|null} nextStep - Next step number or null if final
    */
   const handleAction = async (fn, endpoint, data, nextStep) => {
-    setLoading(true); setError(""); setMessage("");
+    if (nextStep === 3 && formData.password !== formData.confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    setLoading(true);
     try {
-      await axios.post(`${API_URL}${endpoint}`, data);
-      if (nextStep) setStep(nextStep);
-      else { setMessage("Registration successful! Redirecting..."); setTimeout(() => navigate("/login"), 1500); }
-    } catch (err) { setError(err.response?.data?.error || "An error occurred."); }
-    finally { setLoading(false); }
+      await fn(`${API_URL}${endpoint}`, data);
+      
+      if (nextStep === 2) {
+        toast.success("OTP sent successfully to your email.");
+        setStep(nextStep);
+      } else if (nextStep === 3) {
+        toast.success("OTP verified successfully.");
+        setStep(nextStep);
+      } else {
+        toast.success("Registration successful!");
+        setTimeout(() => navigate("/login"), 1500);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || "An error occurred.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,16 +80,15 @@ const Register = () => {
             ))}
           </div>
 
-          {message && <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl mb-6 text-sm font-medium border border-emerald-100">{message}</div>}
-          {error && <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl mb-6 text-sm font-medium border border-rose-100">{error}</div>}
-
           <div className="space-y-5">
             {step === 1 && (
               <>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" placeholder="name@company.com" />
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all text-sm" placeholder="name@company.com" />
+                  </div>
                 </div>
                 <button onClick={() => handleAction(axios.post, "/auth/send-otp", { email }, 2)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Sending..." : "Send OTP"}</button>
               </>
@@ -81,8 +96,10 @@ const Register = () => {
 
             {step === 2 && (
               <>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Verification Code</label>
-                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl focus:border-cyan-500 outline-none transition-all text-center text-xl tracking-[0.5em]" placeholder="000000" />
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-2">Verification Code</label>
+                  <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={6} className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl focus:border-cyan-500 outline-none transition-all text-center text-xl tracking-[0.5em] font-mono" placeholder="000000" />
+                </div>
                 <button onClick={() => handleAction(axios.post, "/auth/verify-otp", { email, otp }, 3)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Verifying..." : "Verify OTP"}</button>
               </>
             )}
@@ -91,21 +108,21 @@ const Register = () => {
               <>
                 <div className="relative">
                   <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                  <input type="text" placeholder="Full Name" onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                  <input type="text" placeholder="Full Name" onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all text-sm" />
                 </div>
                 <div className="relative">
                   <Hash className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                  <input type="text" placeholder="User ID" onChange={(e) => setFormData({...formData, userId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
+                  <input type="text" placeholder="User ID" onChange={(e) => setFormData({...formData, userId: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 rounded-2xl focus:border-cyan-500 outline-none transition-all text-sm" />
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                  <input type={passwordVisible ? "text" : "password"} placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
-                  <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-4 top-3.5 text-gray-400">{passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <input type={passwordVisible ? "text" : "password"} placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all text-sm" />
+                  <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-4 top-3.5 text-gray-400 hover:text-cyan-600 transition">{passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                  <input type={confirmVisible ? "text" : "password"} placeholder="Confirm Password" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all" />
-                  <button type="button" onClick={() => setConfirmVisible(!confirmVisible)} className="absolute right-4 top-3.5 text-gray-400">{confirmVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <input type={confirmVisible ? "text" : "password"} placeholder="Confirm Password" onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className="w-full bg-gray-50 border border-gray-200 p-3.5 pl-11 pr-12 rounded-2xl focus:border-cyan-500 outline-none transition-all text-sm" />
+                  <button type="button" onClick={() => setConfirmVisible(!confirmVisible)} className="absolute right-4 top-3.5 text-gray-400 hover:text-cyan-600 transition">{confirmVisible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
                 <button onClick={() => handleAction(axios.post, "/auth/register", { ...formData, email }, null)} disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-cyan-600/20">{loading ? "Registering..." : "Complete Registration"}</button>
               </>

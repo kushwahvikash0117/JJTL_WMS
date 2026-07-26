@@ -96,7 +96,10 @@ const InventoryDigitalView = () => {
    * @returns {number} Total weight/quantity
    */
   const getSlotTotalQty = (slotItems) => {
-    return slotItems.reduce((acc, curr) => acc + Number(curr.qty || 0), 0);
+    return slotItems.reduce((acc, curr) => {
+      const val = curr.currentQuantity !== undefined && curr.currentQuantity !== null ? curr.currentQuantity : curr.qty;
+      return acc + Number(val || 0);
+    }, 0);
   };
 
   /**
@@ -290,18 +293,21 @@ const InventoryDigitalView = () => {
                   <div className="pt-1">
                     <p className="text-xs font-bold text-gray-600 mb-2">Stored Items Info (Click to view details):</p>
                     <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1">
-                      {selectedCellData.slotItems.map((item, idx) => (
-                        <div 
-                          key={item._id || idx} 
-                          onClick={() => setSelectedRollItem(item)}
-                          className="bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 flex justify-between items-center text-xs cursor-pointer hover:bg-cyan-50/50 hover:border-cyan-200 transition-all"
-                        >
-                          <span className="font-medium text-gray-700 truncate max-w-[180px]">
-                            {item.productDescription || item.element || 'Roll Item'}
-                          </span>
-                          <span className="font-bold text-cyan-700">{Number(item.qty || 0).toFixed(2)} Kg</span>
-                        </div>
-                      ))}
+                      {selectedCellData.slotItems.map((item, idx) => {
+                        const itemQty = item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty;
+                        return (
+                          <div 
+                            key={item._id || idx} 
+                            onClick={() => setSelectedRollItem(item)}
+                            className="bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 flex justify-between items-center text-xs cursor-pointer hover:bg-cyan-50/50 hover:border-cyan-200 transition-all"
+                          >
+                            <span className="font-medium text-gray-700 truncate max-w-[180px]">
+                              {item.productDescription || item.element || 'Roll Item'}
+                            </span>
+                            <span className="font-bold text-cyan-700">{Number(itemQty || 0).toFixed(2)} Kg</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -319,72 +325,75 @@ const InventoryDigitalView = () => {
       })()}
 
       {/* Individual Roll Details Modal */}
-      {selectedRollItem && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-              <div>
-                <h3 className="font-bold text-lg text-gray-900">Roll Details</h3>
-                <p className="text-xs text-gray-400 font-mono">Roll No: {selectedRollItem.rollNo || 'N/A'}</p>
+      {selectedRollItem && (() => {
+        const itemQty = selectedRollItem.currentQuantity !== undefined && selectedRollItem.currentQuantity !== null ? selectedRollItem.currentQuantity : selectedRollItem.qty;
+        return (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">Roll Details</h3>
+                  <p className="text-xs text-gray-400 font-mono">Roll No: {selectedRollItem.rollNo || 'N/A'}</p>
+                </div>
+                <button onClick={() => setSelectedRollItem(null)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
               </div>
-              <button onClick={() => setSelectedRollItem(null)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
-            </div>
 
-            <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
-              <button 
-                onClick={() => setCardType('roll')} 
-                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${cardType === 'roll' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}
+              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+                <button 
+                  onClick={() => setCardType('roll')} 
+                  className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${cardType === 'roll' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}
+                >
+                  Roll No Label
+                </button>
+                <button 
+                  onClick={() => setCardType('element')} 
+                  className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${cardType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}
+                >
+                  Element Label
+                </button>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex justify-center overflow-hidden mb-6">
+                {cardType === 'roll' ? (
+                  <RollBarcodeCard itemData={selectedRollItem} />
+                ) : (
+                  <ElementBarcodeCard itemData={selectedRollItem} />
+                )}
+              </div>
+
+              <div className="space-y-3 text-xs mb-6">
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
+                  <span className="text-gray-400 font-medium">Buyer</span>
+                  <span className="font-bold text-gray-800">{selectedRollItem.buyer || 'N/A'}</span>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
+                  <span className="text-gray-400 font-medium">PO No</span>
+                  <span className="font-bold text-gray-800">{selectedRollItem.poNo || 'N/A'}</span>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
+                  <span className="text-gray-400 font-medium">Element ID</span>
+                  <span className="font-bold text-gray-800">{selectedRollItem.element || 'N/A'}</span>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
+                  <span className="text-gray-400 font-medium">Quantity</span>
+                  <span className="font-bold text-cyan-600">{itemQty !== undefined && itemQty !== null ? `${itemQty} Kg` : 'N/A'}</span>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
+                  <span className="text-gray-400 font-medium">Location</span>
+                  <span className="font-bold text-gray-800">{selectedRollItem.locationName || 'N/A'}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedRollItem(null)}
+                className="w-full bg-gray-900 text-white py-2.5 rounded-2xl font-semibold hover:bg-gray-800 transition-colors text-xs"
               >
-                Roll No Label
-              </button>
-              <button 
-                onClick={() => setCardType('element')} 
-                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${cardType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}
-              >
-                Element Label
+                Close
               </button>
             </div>
-
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex justify-center overflow-hidden mb-6">
-              {cardType === 'roll' ? (
-                <RollBarcodeCard itemData={selectedRollItem} />
-              ) : (
-                <ElementBarcodeCard itemData={selectedRollItem} />
-              )}
-            </div>
-
-            <div className="space-y-3 text-xs mb-6">
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
-                <span className="text-gray-400 font-medium">Buyer</span>
-                <span className="font-bold text-gray-800">{selectedRollItem.buyer || 'N/A'}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
-                <span className="text-gray-400 font-medium">PO No</span>
-                <span className="font-bold text-gray-800">{selectedRollItem.poNo || 'N/A'}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
-                <span className="text-gray-400 font-medium">Element ID</span>
-                <span className="font-bold text-gray-800">{selectedRollItem.element || 'N/A'}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
-                <span className="text-gray-400 font-medium">Quantity</span>
-                <span className="font-bold text-cyan-600">{selectedRollItem.qty ? `${selectedRollItem.qty} Kg` : 'N/A'}</span>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex justify-between">
-                <span className="text-gray-400 font-medium">Location</span>
-                <span className="font-bold text-gray-800">{selectedRollItem.locationName || 'N/A'}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedRollItem(null)}
-              className="w-full bg-gray-900 text-white py-2.5 rounded-2xl font-semibold hover:bg-gray-800 transition-colors text-xs"
-            >
-              Close
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {fetchingSlot && (
         <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-2 rounded-xl text-xs shadow-lg flex items-center gap-2 z-50">

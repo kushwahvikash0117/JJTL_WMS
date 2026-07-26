@@ -14,7 +14,8 @@ const itemSchema = new mongoose.Schema({
   lot: { type: String, required: true }, 
   element: { type: String, required: true, unique: true },
   productDescription: String, 
-  qty: Number, 
+  initialQuantity: Number, 
+  currentQuantity: Number, 
   netWeight: Number, 
   grossWeight: Number, 
   length: Number, 
@@ -29,7 +30,7 @@ const itemSchema = new mongoose.Schema({
   // Location Tracking fields
   currentBin: { type: mongoose.Schema.Types.ObjectId, ref: 'Bin', default: null },
   locationBarcode: { type: String, default: null }, 
-  locationName: { type: String, default: null },    
+  locationName: { type: String, default: null },   
   
   // Lifecycle timestamp trackers
   createdAt: { type: Date, default: Date.now },    

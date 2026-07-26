@@ -41,6 +41,20 @@ const Logs = () => {
   }, [selectedLog]);
 
   /**
+   * Helper function to format numbers up to 2 decimal places if they are decimals.
+   * 
+   * @param {any} val - Value to format
+   * @returns {string|any} Formatted value
+   */
+  const formatNumber = (val) => {
+    if (typeof val === 'number' || (!isNaN(val) && val !== '' && val !== null && val !== undefined)) {
+      const num = Number(val);
+      return Number.isInteger(num) ? num : num.toFixed(2);
+    }
+    return val;
+  };
+
+  /**
    * Fetches all activity logs from the backend API.
    */
   const fetchLogs = async () => {
@@ -177,7 +191,9 @@ const Logs = () => {
                           {log.itemId?.locationName || '-'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-gray-700">{log.itemId?.qty ?? '-'}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-700">
+                        {log.itemId?.qty !== undefined && log.itemId?.qty !== null ? formatNumber(log.itemId.qty) : '-'}
+                      </td>
                       <td className="px-6 py-4 text-gray-400 text-xs">
                         {new Date(log.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                       </td>
@@ -265,9 +281,33 @@ const Logs = () => {
                   <span className="text-xs text-gray-400 font-medium">Location</span>
                   <span className="font-semibold text-gray-700 text-xs">{detailedItem?.locationName || selectedLog.itemId?.locationName || '-'}</span>
                 </div>
+                
+                {/* 1. Initial Quantity (First point) */}
+                <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                  <span className="text-xs text-gray-400 font-medium">Initial Quantity</span>
+                  <span className="font-extrabold text-cyan-600 text-xs">
+                    {formatNumber(
+                      detailedItem?.initialQuantity ?? 
+                      detailedItem?.qty ?? 
+                      selectedLog.itemId?.initialQuantity ?? 
+                      selectedLog.itemId?.qty ?? 
+                      '-'
+                    )} Kg
+                  </span>
+                </div>
+
+                {/* 2. Current Quantity when exited (Last point) */}
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400 font-medium">Quantity</span>
-                  <span className="font-semibold text-gray-700 text-xs">{detailedItem?.qty ?? selectedLog.itemId?.qty ?? '-'}</span>
+                  <span className="text-xs text-gray-400 font-medium">Current Quantity (Exited)</span>
+                  <span className="font-extrabold text-rose-600 text-xs">
+                    {formatNumber(
+                      detailedItem?.currentQuantity ?? 
+                      detailedItem?.qty ?? 
+                      selectedLog.itemId?.currentQuantity ?? 
+                      selectedLog.itemId?.qty ?? 
+                      '-'
+                    )} Kg
+                  </span>
                 </div>
               </div>
 

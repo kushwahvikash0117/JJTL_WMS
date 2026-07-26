@@ -12,7 +12,14 @@ import { createLog } from './logController.js';
  */
 export const addItem = async (req, res) => {
   try {
-    const item = await Item.create({ ...req.body, barcode: req.body.rollNo });
+    const itemData = { ...req.body, barcode: req.body.rollNo };
+    
+    // Automatically assign initialQuantity to currentQuantity if provided from the frontend
+    if (itemData.currentQuantity !== undefined && itemData.initialQuantity === undefined) {
+      itemData.initialQuantity = itemData.currentQuantity;
+    }
+
+    const item = await Item.create(itemData);
     
     await createLog(item._id, 'ADD', req.user.id, null, item, "New item addition to packing list");
     
@@ -166,10 +173,10 @@ export const exitItem = async (req, res) => {
  */
 export const updateItem = async (req, res) => {
   try {
-    const { qty, batchNo } = req.body;
+    const { currentQuantity, batchNo } = req.body;
     
-    if (qty === undefined) {
-      return res.status(400).json({ error: "Quantity is required" });
+    if (currentQuantity === undefined) {
+      return res.status(400).json({ error: "Current quantity is required" });
     }
 
     const existingItem = await Item.findById(req.params.id);
@@ -177,12 +184,12 @@ export const updateItem = async (req, res) => {
       return res.status(404).json({ error: "Item not found" });
     }
 
-    const originalQty = existingItem.qty || 0;
-    const newQty = Number(qty);
+    const originalQty = existingItem.currentQuantity || 0;
+    const newQty = Number(currentQuantity);
     const quantityGone = originalQty - newQty;
 
     const updateData = {
-      qty: newQty, 
+      currentQuantity: newQty, 
       netWeight: newQty, 
       grossWeight: newQty 
     };
