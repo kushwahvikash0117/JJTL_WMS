@@ -65,7 +65,7 @@ export const getItemByElement = async (req, res) => {
 };
 
 /**
- * Allocates an item to a specific storage location/bin and logs the action.
+ * Allocates an item to a specific storage location/bin, unlinking it from any previous bin first, and logs the action.
  */
 export const entryItem = async (req, res) => {
   try {
@@ -80,12 +80,19 @@ export const entryItem = async (req, res) => {
       return res.status(404).json({ error: "Item not found in database" });
     }
 
+    // If the item is already linked to a different bin, unlink it first
+    if (existingItemBefore.currentBin) {
+      await Bin.findByIdAndUpdate(existingItemBefore.currentBin, { $pull: { items: itemId } });
+    }
+
+    // Find or create the target bin location
     const bin = await Bin.findOneAndUpdate(
       { locationBarcode },
       { $setOnInsert: { locationBarcode, locationName } },
       { new: true, upsert: true }
     );
 
+    // Update item with new bin reference and location info
     const updatedItem = await Item.findByIdAndUpdate(
       itemId, 
       { 
@@ -99,6 +106,7 @@ export const entryItem = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    // Add item reference to the new bin's items array
     await Bin.findByIdAndUpdate(bin._id, { $addToSet: { items: itemId } });
     
     await createLog(
@@ -118,7 +126,7 @@ export const entryItem = async (req, res) => {
 };
 
 /**
- * Removes an item from its current bin location and records its exit.
+ * Removes an item from its current bin location (deleting its reference from the Bin model) and records its exit.
  */
 export const exitItem = async (req, res) => {
   try {
@@ -127,6 +135,7 @@ export const exitItem = async (req, res) => {
     
     if (!item) return res.status(404).json({ error: "Item not found" });
 
+    // Remove the item from its current Bin model reference
     if (item.currentBin) {
       await Bin.findByIdAndUpdate(item.currentBin, { $pull: { items: itemId } });
     }

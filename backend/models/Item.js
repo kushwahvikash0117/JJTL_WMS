@@ -9,10 +9,10 @@ import mongoose from 'mongoose';
  * Schema representing an inventory item along with its tracking, location, and history details.
  */
 const itemSchema = new mongoose.Schema({
-  buyer: String, 
-  poNo: String, 
-  lot: String, 
-  element: String,
+  buyer: { type: String, required: true }, 
+  poNo: { type: String, required: true }, 
+  lot: { type: String, required: true }, 
+  element: { type: String, required: true, unique: true },
   productDescription: String, 
   qty: Number, 
   netWeight: Number, 
@@ -32,7 +32,7 @@ const itemSchema = new mongoose.Schema({
   locationName: { type: String, default: null },    
   
   // Lifecycle timestamp trackers
-  createdAt: { type: Date, default: Date.now },     
+  createdAt: { type: Date, default: Date.now },    
   itemEntered: { type: Date, default: null },        
 
   // History tracking for quantity updates

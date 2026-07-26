@@ -80,13 +80,22 @@ const ScanItem = () => {
       if (actionType === 'ENTRY') {
         const scannedInput = String(inputValue.bin).trim();
         
-        const locationName = Object.entries(LOCATION_BARCODE_MAP).find(
+        // Validate if location barcode exists in LOCATION_BARCODE_MAP
+        const matchedLocation = Object.entries(LOCATION_BARCODE_MAP).find(
           ([name, barcode]) => String(barcode).trim() === scannedInput
-        )?.[0] || scannedInput;
+        );
+
+        if (!matchedLocation) {
+          alert("Location barcode invalid");
+          setLoading(false);
+          setInputValue({ ...inputValue, bin: '' }); // Reset bin input to prompt scanning again
+          return;
+        }
+
+        const locationName = matchedLocation[0];
 
         await entryItem({ itemId: item._id, locationBarcode: scannedInput, locationName: locationName });
       } else if (actionType === 'UPDATE') {
-        // quantityGone is now calculated automatically on the backend via (original - new)
         await updateItem(item._id, { 
           qty: inputValue.qty, 
           batchNo: inputValue.batchNo 
@@ -107,11 +116,19 @@ const ScanItem = () => {
   };
 
   /**
-   * Adds the current scanned item identifier to the bulk queue.
+   * Adds the current scanned item identifier to the bulk queue after checking for duplicates.
    */
   const handleScanNextItem = () => {
-    if (!currentItemCode.trim()) return;
-    setScannedIdentifiers((prev) => [...prev, currentItemCode.trim()]);
+    const trimmedCode = currentItemCode.trim();
+    if (!trimmedCode) return;
+
+    if (scannedIdentifiers.includes(trimmedCode)) {
+      alert("This item is already added to the scan queue.");
+      setCurrentItemCode('');
+      return;
+    }
+
+    setScannedIdentifiers((prev) => [...prev, trimmedCode]);
     setCurrentItemCode('');
   };
 
@@ -265,7 +282,12 @@ const ScanItem = () => {
                 ) : (
                   <div className="space-y-3">
                     {actionType === 'ENTRY' && (
-                      <input placeholder="Scan Location Barcode" className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" onChange={(e) => setInputValue({bin: e.target.value})} />
+                      <input 
+                        placeholder="Scan Location Barcode" 
+                        className="w-full p-3 border rounded-xl outline-none focus:border-cyan-500 text-sm" 
+                        value={inputValue.bin || ''}
+                        onChange={(e) => setInputValue({bin: e.target.value})} 
+                      />
                     )}
                     
                     {actionType === 'UPDATE' && (

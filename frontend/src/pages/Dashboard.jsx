@@ -97,12 +97,20 @@ const Dashboard = () => {
       return isExit && isToday;
     }).length;
 
-    // Total KGs of items: sum up quantities or weight fields from logs/items
+    // Total KGs of items: sum of quantities where location is NOT null and batch IS null
     let totalKgs = 0;
     logs.forEach((log) => {
-      const qty = log.itemId?.qty;
-      if (qty && typeof qty === 'number') {
-        totalKgs += qty;
+      const item = log.itemId;
+      if (!item) return;
+
+      const hasNotNullLocation = Boolean(item.locationName || item.locationId);
+      const hasNullBatch = !item.batch && !item.batchNo;
+
+      if (hasNotNullLocation && hasNullBatch) {
+        const qty = item.qty;
+        if (qty && typeof qty === 'number') {
+          totalKgs += qty;
+        }
       }
     });
 

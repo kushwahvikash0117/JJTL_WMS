@@ -59,6 +59,20 @@ const Warehouse = () => {
   }, []);
 
   /**
+   * Helper function to format numbers up to 2 decimal places if they are decimals.
+   * 
+   * @param {any} val - Value to format
+   * @returns {string|any} Formatted value
+   */
+  const formatNumber = (val) => {
+    if (typeof val === 'number' || (!isNaN(val) && val !== '' && val !== null && val !== undefined)) {
+      const num = Number(val);
+      return Number.isInteger(num) ? num : num.toFixed(2);
+    }
+    return val;
+  };
+
+  /**
    * Fetches all inventory items from the warehouse API.
    */
   const fetchItems = async () => {
@@ -69,18 +83,22 @@ const Warehouse = () => {
   };
 
   // --- Dynamic Columns Logic ---
-  // Hide 'batches' for packing and current stock tabs
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
-    if (activeTab === 'packing' || activeTab === 'current') {
+    if (activeTab === 'packing') {
+      return {
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'qty', 'productDescription'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
+      };
+    } else if (activeTab === 'current') {
       return {
         keys: ['buyer', 'createdAt', 'poNo', 'element', 'locationName', 'qty', 'productDescription'],
         labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
       };
     }
-    // Issued stock
+    // Issued stock (hides location name, includes batches)
     return {
-      keys: ['buyer', 'createdAt', 'poNo', 'element', 'locationName', 'batches', 'qty', 'productDescription'],
-      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Batch', 'Qty', 'Description']
+      keys: ['buyer', 'createdAt', 'poNo', 'element', 'batches', 'qty', 'productDescription'],
+      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
     };
   }, [activeTab]);
 
@@ -109,6 +127,9 @@ const Warehouse = () => {
     if (column === 'createdAt' && item[column]) {
       return new Date(item[column]).toLocaleDateString();
     }
+    if (column === 'qty') {
+      return formatNumber(item[column]);
+    }
     return item[column];
   }))].filter(Boolean);
 
@@ -119,6 +140,8 @@ const Warehouse = () => {
         let val = item[col];
         if (col === 'createdAt' && val) {
           val = new Date(val).toLocaleDateString();
+        } else if (col === 'qty') {
+          val = formatNumber(val);
         }
         return selectedValues.includes(val);
       });
@@ -175,6 +198,7 @@ const Warehouse = () => {
     }
     const dataToExport = filteredItems.filter(item => selectedRows.includes(item._id)).map(item => ({
       ...item,
+      qty: item.qty !== undefined && item.qty !== null ? Number(formatNumber(item.qty)) : item.qty,
       createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'
     }));
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -404,6 +428,8 @@ const Warehouse = () => {
                     let displayVal = item[col];
                     if (col === 'createdAt' && displayVal) {
                       displayVal = new Date(displayVal).toLocaleDateString();
+                    } else if (col === 'qty') {
+                      displayVal = formatNumber(displayVal);
                     }
                     
                     let cellStyle = "px-6 py-4 text-sm text-gray-600 ";
@@ -421,7 +447,7 @@ const Warehouse = () => {
                         className={cellStyle}
                         title={col !== 'productDescription' && col !== 'element' ? displayVal : undefined}
                       >
-                        {displayVal || "N/A"}
+                        {displayVal !== undefined && displayVal !== null && displayVal !== '' ? displayVal : "N/A"}
                       </td>
                     );
                   })}
@@ -537,7 +563,7 @@ const Warehouse = () => {
                           <p className="font-bold text-gray-700">Batch: {upd.batchNo}</p>
                           <p className="text-[10px] text-gray-400">{new Date(upd.timestamp).toLocaleString()}</p>
                         </div>
-                        <span className="font-extrabold text-cyan-600 text-sm">-{upd.quantityGone} Kg</span>
+                        <span className="font-extrabold text-cyan-600 text-sm">-{formatNumber(upd.quantityGone)} Kg</span>
                       </div>
                     ))}
                   </div>
