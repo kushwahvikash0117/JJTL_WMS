@@ -86,18 +86,18 @@ const Warehouse = () => {
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
     if (activeTab === 'packing') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'qty', 'productDescription'],
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'netWeight', 'productDescription'],
         labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
       };
     } else if (activeTab === 'current') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'locationName', 'qty', 'productDescription'],
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'locationName', 'netWeight', 'productDescription'],
         labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
       };
     }
     // Issued stock (hides location name, includes batches)
     return {
-      keys: ['buyer', 'createdAt', 'poNo', 'element', 'batches', 'qty', 'productDescription'],
+      keys: ['buyer', 'createdAt', 'poNo', 'element', 'batches', 'netWeight', 'productDescription'],
       labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
     };
   }, [activeTab]);
