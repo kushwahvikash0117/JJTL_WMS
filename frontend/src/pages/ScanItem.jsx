@@ -1,10 +1,10 @@
 /**
  * @file ScanItem.jsx
- * @description React component for scanning and managing inventory items and bulk warehouse bin locations in the JJTL WMS system, utilizing react-hot-toast.
+ * @description React component for scanning and managing inventory items, bulk warehouse bin locations, and batch exits in the JJTL WMS system, utilizing react-hot-toast.
  */
 
 import React, { useState } from 'react';
-import { getItemByBarcode, getItemByElement, updateItem, entryItem, exitItem } from '../api/itemService';
+import { getItemByBarcode, getItemByElement, updateItem, entryItem, exitItem, batchExitItems } from '../api/itemService';
 import { addBulkItems } from '../api/binService';
 import { X, Search, Box, Save, LogIn, LogOut, Package, MapPin, Plus } from 'lucide-react';
 import { LOCATION_BARCODE_MAP } from '../utils/constants';
@@ -30,6 +30,13 @@ const ScanItem = () => {
   const [scannedIdentifiers, setScannedIdentifiers] = useState([]);
   const [currentItemCode, setCurrentItemCode] = useState('');
   const [bulkScanMode, setBulkScanMode] = useState('element');
+
+  // States specific to Batch Exit Scanner Mode
+  const [batchExitNo, setBatchExitNo] = useState('');
+  const [batchExitStep, setBatchExitStep] = useState('scanBatch');
+  const [batchExitIdentifiers, setBatchExitIdentifiers] = useState([]);
+  const [currentBatchExitCode, setCurrentBatchExitCode] = useState('');
+  const [batchExitScanMode, setBatchExitScanMode] = useState('element');
 
   /**
    * Helper function to format numbers up to 2 decimal places if they are decimals.
@@ -65,6 +72,20 @@ const ScanItem = () => {
       setScannedIdentifiers([]);
       setCurrentItemCode('');
       setBulkScanMode('element');
+      setShowModal(true);
+      setQuery('');
+      return;
+    }
+
+    if (searchType === 'batchExit') {
+      const scannedBatch = String(query).trim();
+      if (!scannedBatch) return;
+
+      setBatchExitNo(scannedBatch);
+      setBatchExitStep('scanItems');
+      setBatchExitIdentifiers([]);
+      setCurrentBatchExitCode('');
+      setBatchExitScanMode('element');
       setShowModal(true);
       setQuery('');
       return;
@@ -176,6 +197,66 @@ const ScanItem = () => {
   };
 
   /**
+   * Adds the current scanned item identifier to the batch exit queue after checking for duplicates.
+   */
+  const handleScanNextBatchExitItem = async () => {
+    const trimmedCode = currentBatchExitCode.trim();
+    if (!trimmedCode) return;
+
+    if (batchExitIdentifiers.some((itemObj) => itemObj.identifier === trimmedCode)) {
+      toast.error("This item is already added to the batch exit queue.");
+      setCurrentBatchExitCode('');
+      return;
+    }
+
+    // Resolve item ID by scanning code depending on batchExitScanMode
+    try {
+      const { data } = batchExitScanMode === 'rollNo'
+        ? await getItemByBarcode(trimmedCode)
+        : await getItemByElement(trimmedCode);
+
+      if (!data || !data._id) {
+        toast.error("Item not found");
+        setCurrentBatchExitCode('');
+        return;
+      }
+
+      setBatchExitIdentifiers((prev) => [...prev, { identifier: trimmedCode, id: data._id }]);
+      setCurrentBatchExitCode('');
+    } catch (err) {
+      toast.error("Item not found");
+      setCurrentBatchExitCode('');
+    }
+  };
+
+  /**
+   * Processes the batch exit for all scanned items under the given batch number.
+   */
+  const handleSaveBatchExit = async () => {
+    if (batchExitIdentifiers.length === 0) {
+      toast.error("Please scan at least one item.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const itemIds = batchExitIdentifiers.map((item) => item.id);
+      await batchExitItems({
+        itemIds,
+        batchNo: batchExitNo
+      });
+      toast.success("Batch exit completed successfully!");
+      setShowModal(false);
+      setBatchExitIdentifiers([]);
+      setBatchExitNo('');
+      setBatchExitStep('scanBatch');
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Batch exit failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Closes the active modal and resets all related state values.
    */
   const handleCloseModal = () => {
@@ -185,21 +266,26 @@ const ScanItem = () => {
     setBulkStep('scanLocation');
     setScannedIdentifiers([]);
     setCurrentItemCode('');
+    setBatchExitStep('scanBatch');
+    setBatchExitIdentifiers([]);
+    setBatchExitNo('');
+    setCurrentBatchExitCode('');
   };
 
   return (
     <div className="max-w-md mx-auto p-4 sm:p-6">
       <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Scan Item</h2>
       
-      <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl mb-4">
-        <button type="button" onClick={() => setSearchType('rollNo')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Roll No</button>
-        <button type="button" onClick={() => setSearchType('element')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Element</button>
-        <button type="button" onClick={() => setSearchType('bulkEntry')} className={`py-2 rounded-lg font-bold text-xs sm:text-sm ${searchType === 'bulkEntry' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Bulk Location</button>
+      <div className="grid grid-cols-4 gap-1 bg-gray-100 p-1 rounded-xl mb-4">
+        <button type="button" onClick={() => setSearchType('rollNo')} className={`py-2 rounded-lg font-bold text-[11px] sm:text-xs ${searchType === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Roll No</button>
+        <button type="button" onClick={() => setSearchType('element')} className={`py-2 rounded-lg font-bold text-[11px] sm:text-xs ${searchType === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Element</button>
+        <button type="button" onClick={() => setSearchType('bulkEntry')} className={`py-2 rounded-lg font-bold text-[11px] sm:text-xs ${searchType === 'bulkEntry' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Bulk Entry</button>
+        <button type="button" onClick={() => setSearchType('batchExit')} className={`py-2 rounded-lg font-bold text-[11px] sm:text-xs ${searchType === 'batchExit' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>Batch Exit</button>
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2 mb-8">
         <input className="flex-1 p-4 rounded-2xl border border-gray-200 outline-none focus:border-cyan-500 text-sm" 
-          placeholder={searchType === 'bulkEntry' ? 'Scan Location Barcode...' : `Scan ${searchType === 'rollNo' ? 'Roll No' : 'Element'}...`} 
+          placeholder={searchType === 'bulkEntry' ? 'Scan Location Barcode...' : searchType === 'batchExit' ? 'Scan or Enter Batch No...' : `Scan ${searchType === 'rollNo' ? 'Roll No' : 'Element'}...`} 
           value={query} onChange={(e) => setQuery(e.target.value)} />
         <button type="submit" className="bg-cyan-600 text-white p-4 rounded-2xl hover:bg-cyan-700 transition"><Search size={20} /></button>
       </form>
@@ -280,6 +366,79 @@ const ScanItem = () => {
                     disabled={loading || scannedIdentifiers.length === 0}
                     className="w-full p-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition shadow-lg shadow-cyan-600/20">
                     {loading ? 'Processing...' : <>Save All <Save size={16}/></>}
+                  </button>
+                </div>
+              </div>
+            ) : searchType === 'batchExit' ? (
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                    <LogOut size={18} className="text-rose-600"/> Batch Exit: {batchExitNo}
+                  </h3>
+                  <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                </div>
+
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setBatchExitScanMode('element')} 
+                    className={`flex-1 py-1.5 rounded-lg font-bold text-xs ${batchExitScanMode === 'element' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>
+                    Scan by Element
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setBatchExitScanMode('rollNo')} 
+                    className={`flex-1 py-1.5 rounded-lg font-bold text-xs ${batchExitScanMode === 'rollNo' ? 'bg-white shadow text-cyan-600' : 'text-gray-500'}`}>
+                    Scan by Roll No
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 block mb-1">
+                      Scan {batchExitScanMode === 'element' ? 'Element' : 'Roll No'}
+                    </label>
+                    <input 
+                      placeholder={`Scan ${batchExitScanMode}...`} 
+                      className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 font-mono text-sm"
+                      value={currentBatchExitCode}
+                      onChange={(e) => setCurrentBatchExitCode(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScanNextBatchExitItem(); }}}
+                    />
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 max-h-36 overflow-y-auto">
+                    <div className="text-xs font-bold text-gray-500 mb-2 flex justify-between items-center">
+                      <span>Exit Queue</span>
+                      <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">{batchExitIdentifiers.length} items</span>
+                    </div>
+                    {batchExitIdentifiers.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic text-center py-2">No items added yet</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {batchExitIdentifiers.map((itemObj, idx) => (
+                          <li key={idx} className="text-xs bg-white px-2 py-1.5 rounded border border-gray-200 font-mono flex justify-between items-center">
+                            <span>{itemObj.identifier}</span>
+                            <span className="text-gray-400">#{idx + 1}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={handleCloseModal} className="flex-1 p-3 bg-gray-100 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-200 transition">Back</button>
+                    <button type="button" onClick={handleScanNextBatchExitItem} className="flex-1 p-3 bg-amber-50 text-amber-700 rounded-xl font-bold text-sm flex items-center justify-center gap-1 hover:bg-amber-100 transition">
+                      Scan Next <Plus size={16}/>
+                    </button>
+                  </div>
+                  
+                  <button 
+                    type="button"
+                    onClick={handleSaveBatchExit} 
+                    disabled={loading || batchExitIdentifiers.length === 0}
+                    className="w-full p-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition shadow-lg shadow-rose-600/20">
+                    {loading ? 'Processing...' : <>Confirm Batch Exit <Save size={16}/></>}
                   </button>
                 </div>
               </div>

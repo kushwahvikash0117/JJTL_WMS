@@ -1,6 +1,6 @@
 /**
  * @file AddItem.jsx
- * @description React component for adding new inventory items manually or via bulk spreadsheet uploads, with label preview support and toast notifications.
+ * @description React component for adding new inventory items manually or via bulk spreadsheet uploads, with label preview support, toast notifications, and file tracking.
  */
 
 import React, { useState } from 'react';
@@ -34,7 +34,8 @@ const AddItem = () => {
   const [formData, setFormData] = useState({
     buyer: '', poNo: '', productDescription: '', 
     lot: '', element: '', currentQuantity: '', netWeight: '', 
-    grossWeight: '', length: '', breadth: '', height: ''
+    grossWeight: '', length: '', breadth: '', height: '',
+    packingList: ''
   });
 
   /**
@@ -65,6 +66,11 @@ const AddItem = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Extract file name without extension safely
+    const rawFileName = file.name || '';
+    const lastDotIndex = rawFileName.lastIndexOf('.');
+    const fileNameWithoutExt = lastDotIndex !== -1 ? rawFileName.substring(0, lastDotIndex) : rawFileName;
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -105,7 +111,11 @@ const AddItem = () => {
 
           if (Object.keys(filteredData).length > 0) {
             try {
-              await addItem({ ...filteredData, rollNo: generateUniqueRollNo() });
+              await addItem({ 
+                ...filteredData, 
+                rollNo: generateUniqueRollNo(),
+                packingList: filteredData.packingList || fileNameWithoutExt
+              });
               successCount++;
             } catch (err) { 
               console.error(`Bulk upload error at row ${i + 2}:`, err); 
@@ -205,7 +215,7 @@ const AddItem = () => {
                 name={field}
                 value={formData[field]}
                 onChange={(e) => setFormData({...formData, [field]: e.target.value})}
-                required
+                required={field !== 'packingList'}
                 className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none transition-all"
               />
             </div>

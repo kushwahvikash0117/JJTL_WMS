@@ -62,9 +62,9 @@ export const updateItem = (id, itemData) => api.put(`/items/${id}`, itemData);
 export const exitItem = (payload) => api.post('/items/exit', payload);
 
 /**
- * Permanently removes an item record from the database (administrative use).
+ * Processes a batch exit for multiple items under a single batch number.
  * 
- * @param {string} id - The unique MongoDB identifier of the item to delete
+ * @param {Object} payload - Object containing itemIds array and the batchNo string
  * @returns {Promise<Object>} Axios response object
  */
-export const removeItem = (id) => api.delete(`/items/${id}`);
+export const batchExitItems = (payload) => api.post('/items/batch-exit', payload);

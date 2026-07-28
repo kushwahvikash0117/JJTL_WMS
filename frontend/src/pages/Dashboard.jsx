@@ -7,6 +7,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats } from '../api/dashboardService';
 import { getLogs } from '../api/logService';
+import { getAllItems } from '../api/itemService';
 import { Package, Clock, CheckCircle2, Scale, LayoutDashboard, BarChart2, PieChart } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -44,14 +45,22 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ totalItems: 0, activePO: 0, lowStockAlerts: 0, systemUsers: 0 });
   const [logs, setLogs] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, logsRes] = await Promise.all([getDashboardStats(), getLogs()]);
+        const [statsRes, logsRes, itemsRes] = await Promise.all([
+          getDashboardStats(), 
+          getLogs(),
+          getAllItems()
+        ]);
         setStats(statsRes.data);
         setLogs(logsRes.data);
+        // Handle items response structure gracefully (array or nested response.data)
+        const itemsData = Array.isArray(itemsRes) ? itemsRes : (itemsRes.data || itemsRes.items || []);
+        setItems(itemsData);
       } catch (err) { 
         console.error('Failed to fetch dashboard data', err); 
       } finally { 
@@ -80,13 +89,18 @@ const Dashboard = () => {
   const customStats = useMemo(() => {
     const totalItems = stats.totalItems || 0;
     
-    // Upcoming Items: count of unique items/logs where location and batch are null/empty
-    const upcomingItemsCount = logs.filter((log) => {
-      const item = log.itemId;
+    // Upcoming Items: count of items from getAllItems that have no location and no batch assigned
+    const upcomingItemsCount = items.filter((item) => {
       if (!item) return false;
-      const hasNullLocation = !item.locationName && !item.locationId;
-      const hasNullBatch = !item.batch && !item.batchNo;
-      return hasNullLocation && hasNullBatch;
+      
+      const hasNoLocation = (!item.locationName || String(item.locationName).trim() === '') && 
+                            (!item.locationBarcode || String(item.locationBarcode).trim() === '') &&
+                            (!item.locationId || String(item.locationId).trim() === '');
+                            
+      const hasNoBatch = (!item.batches || String(item.batches).trim() === '') && 
+                         (!item.batchNo || String(item.batchNo).trim() === '');
+
+      return hasNoLocation && hasNoBatch;
     }).length;
 
     // Items Issued Today (Count of 'Exit' or 'OUT' logs created today)
@@ -103,8 +117,11 @@ const Dashboard = () => {
       const item = log.itemId;
       if (!item) return;
 
-      const hasNotNullLocation = Boolean(item.locationName || item.locationId);
-      const hasNullBatch = !item.batch && !item.batchNo;
+      const hasNotNullLocation = Boolean((item.locationName && String(item.locationName).trim() !== '') || 
+                                         (item.locationBarcode && String(item.locationBarcode).trim() !== '') || 
+                                         item.locationId);
+      const hasNullBatch = (!item.batches || String(item.batches).trim() === '') && 
+                           (!item.batchNo || String(item.batchNo).trim() === '');
 
       if (hasNotNullLocation && hasNullBatch) {
         const currentQuantity = item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty;
@@ -120,7 +137,7 @@ const Dashboard = () => {
       issuedToday,
       totalKgs: `${totalKgs.toLocaleString()} KG`,
     };
-  }, [stats, logs]);
+  }, [stats, logs, items]);
 
   // Process data for Buyer Bar Chart (Top 5 Buyers count)
   const buyerChartData = useMemo(() => {

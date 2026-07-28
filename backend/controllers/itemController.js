@@ -1,6 +1,6 @@
 /**
  * @file itemController.js
- * @description Handles inventory item operations (creation, retrieval, allocation, exit, and updates).
+ * @description Handles inventory item operations (creation, retrieval, allocation, exit, batch exit, and updates).
  */
 
 import Item from '../models/Item.js';
@@ -12,7 +12,11 @@ import { createLog } from './logController.js';
  */
 export const addItem = async (req, res) => {
   try {
-    const itemData = { ...req.body, barcode: req.body.rollNo };
+    const itemData = { 
+      ...req.body, 
+      barcode: req.body.rollNo,
+      packingList: req.body.packingList || 'Packing list'
+    };
     
     // Automatically assign initialQuantity to currentQuantity if provided from the frontend
     if (itemData.currentQuantity !== undefined && itemData.initialQuantity === undefined) {
@@ -21,7 +25,7 @@ export const addItem = async (req, res) => {
 
     const item = await Item.create(itemData);
     
-    await createLog(item._id, 'ADD', req.user.id, null, item, "New item addition to packing list");
+    await createLog(item._id, 'ADD', req.user.id, null, item, `New item addition to ${item.packingList}`);
     
     res.status(201).json(item);
   } catch (err) { 
@@ -165,6 +169,56 @@ export const exitItem = async (req, res) => {
     res.json({ message: "Item exited", item: updatedItem });
   } catch (err) { 
     res.status(500).json({ error: err.message }); 
+  }
+};
+
+/**
+ * Handles batch exit where a single batch number is applied to multiple scanned items to exit them from the warehouse.
+ */
+export const batchExitItems = async (req, res) => {
+  try {
+    const { itemIds, batchNo } = req.body;
+
+    if (!batchNo || batchNo.trim() === "") {
+      return res.status(400).json({ error: "Batch number is required for batch exit." });
+    }
+
+    if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+      return res.status(400).json({ error: "No items provided for batch exit." });
+    }
+
+    const results = [];
+
+    for (const itemId of itemIds) {
+      const item = await Item.findById(itemId);
+      if (!item) continue;
+
+      // Remove the item from its current Bin model reference if present
+      if (item.currentBin) {
+        await Bin.findByIdAndUpdate(item.currentBin, { $pull: { items: itemId } });
+      }
+
+      const updatedItem = await Item.findByIdAndUpdate(itemId, {
+        $set: {
+          currentBin: null,
+          locationBarcode: null,
+          locationName: null,
+          batches: batchNo,
+          exitDetails: {
+            batchNo: batchNo,
+            timestamp: new Date()
+          }
+        }
+      }, { new: true });
+
+      await createLog(itemId, 'EXIT', req.user.id, item, updatedItem, `Item exited warehouse via batch exit. Batch: ${batchNo}`);
+      results.push(updatedItem);
+    }
+
+    res.json({ message: "Batch exit successful", exitedCount: results.length, items: results });
+  } catch (err) {
+    console.error("Batch Exit Error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 

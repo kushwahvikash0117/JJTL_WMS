@@ -86,19 +86,19 @@ const Warehouse = () => {
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
     if (activeTab === 'packing') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'netWeight', 'productDescription'],
-        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
+        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'netWeight', 'productDescription'],
+        labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
       };
     } else if (activeTab === 'current') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'locationName', 'netWeight', 'productDescription'],
-        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
+        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'locationName', 'netWeight', 'productDescription'],
+        labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
       };
     }
     // Issued stock (hides location name, includes batches)
     return {
-      keys: ['buyer', 'createdAt', 'poNo', 'element', 'batches', 'netWeight', 'productDescription'],
-      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
+      keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'batches', 'netWeight', 'productDescription'],
+      labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
     };
   }, [activeTab]);
 
@@ -221,7 +221,7 @@ const Warehouse = () => {
       const itemsToPrint = filteredItems.filter(item => selectedRows.includes(item._id));
 
       // Wait for hidden elements to fully mount and render their internal barcode SVGs/canvases
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       for (const item of itemsToPrint) {
         const domNode = cardRefs.current[item._id];

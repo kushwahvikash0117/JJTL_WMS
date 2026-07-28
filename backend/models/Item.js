@@ -27,6 +27,12 @@ const itemSchema = new mongoose.Schema({
   
   rollNo: { type: String, required: true, unique: true }, // Serves as the primary barcode
   
+  // Source File Tracking
+  packingList: { 
+    type: String, 
+    default: 'Packing list' 
+  },
+  
   // Location Tracking fields
   currentBin: { type: mongoose.Schema.Types.ObjectId, ref: 'Bin', default: null },
   locationBarcode: { type: String, default: null }, 
