@@ -1,9 +1,9 @@
 /**
  * @file Warehouse.jsx
- * @description React component for managing warehouse inventory, filtering, tab categorization, Excel reporting, and bulk exact-component barcode label generation for the JJTL WMS system.
+ * @description React component for managing warehouse inventory, filtering, tab categorization, Excel reporting, and centralized sticker generation for both single and bulk items.
  */
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { getAllItems } from '../api/itemService';
 import { Download, Eye, Filter, Database, X, Search, FileText, Info } from 'lucide-react';
 import RollBarcodeCard from '../components/RollBarcodeCard';
@@ -11,7 +11,6 @@ import ElementBarcodeCard from '../components/ElementBarcodeCard';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
-import { PDFDocument } from 'pdf-lib';
 
 /**
  * Warehouse Component
@@ -35,9 +34,12 @@ const Warehouse = () => {
   // Row Selection & PDF Generation States
   const [selectedRows, setSelectedRows] = useState([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
+  // Dedicated state for print items to prevent React batching/async race conditions with selectedRows
+  const [printItems, setPrintItems] = useState([]);
 
-  // Ref tracker for hidden component DOM nodes and filter dropdown container
-  const cardRefs = useRef({});
+  // Ref tracker for hidden container and filter dropdown
+  const containerRef = useRef(null);
   const filterDropdownRef = useRef(null);
 
   useEffect(() => { 
@@ -95,7 +97,6 @@ const Warehouse = () => {
         labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
       };
     }
-    // Issued stock (hides location name, includes batches)
     return {
       keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'batches', 'netWeight', 'productDescription'],
       labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
@@ -110,13 +111,10 @@ const Warehouse = () => {
       const batch = item.batches;
 
       if (activeTab === 'packing') {
-        // Packing List: locationName is null and batchNo is null
         return !loc && !batch;
       } else if (activeTab === 'current') {
-        // Current Stock: locationName is not null and batchNo is null
         return Boolean(loc) && !batch;
       } else if (activeTab === 'issued') {
-        // Issued Stock: locationName is null and batchNo is not null
         return !loc && Boolean(batch);
       }
       return true;
@@ -207,65 +205,73 @@ const Warehouse = () => {
     XLSX.writeFile(workbook, `${activeTab}_Inventory_Report.xlsx`);
   };
 
-  // --- Bulk PDF Generation using Actual Component DOM & Authentic Barcodes ---
-  const handleGenerateBulkPDF = async () => {
-    if (selectedRows.length === 0) {
+  // --- Centralized function to get target items required for sticker printing (Single or Bulk) ---
+  const getItemsForStickers = useCallback((singleItem = null) => {
+    if (singleItem) {
+      return [singleItem];
+    }
+    return filteredItems.filter(item => selectedRows.includes(item._id));
+  }, [filteredItems, selectedRows]);
+
+  // --- Unified PDF Generation Handler (supports both single item preview modal & bulk table selection) ---
+  const handleGeneratePDF = useCallback(async (targetItem = null) => {
+    const itemsToPrint = getItemsForStickers(targetItem);
+
+    if (itemsToPrint.length === 0) {
       alert("Please select at least one item to generate labels.");
       return;
     }
 
     setIsGeneratingPDF(true);
+    setPrintItems(itemsToPrint);
 
     try {
-      const mergedPdf = await PDFDocument.create();
-      const itemsToPrint = filteredItems.filter(item => selectedRows.includes(item._id));
+      // Allow DOM to update and render cards safely
+      await new Promise(resolve => setTimeout(resolve, 400));
 
-      // Wait for hidden elements to fully mount and render their internal barcode SVGs/canvases
-      await new Promise(resolve => setTimeout(resolve, 800));
+      if (!containerRef.current) return;
+      const cardElements = containerRef.current.querySelectorAll(':scope > .barcode-card-item');
+      if (cardElements.length === 0) {
+        setIsGeneratingPDF(false);
+        setPrintItems([]);
+        return;
+      }
 
-      for (const item of itemsToPrint) {
-        const domNode = cardRefs.current[item._id];
-        if (!domNode) continue;
+      const pdf = new jsPDF('landscape', 'in', [4, 2]);
 
-        // Capture exact rendered component layout with high fidelity scale
-        const canvas = await html2canvas(domNode, {
-          scale: 3,
+      // Optimized configuration to fulfill <5MB for 300 items and <2 mins for 500 items
+      for (let i = 0; i < cardElements.length; i++) {
+        const cardEl = cardElements[i];
+        const canvas = await html2canvas(cardEl, { 
+          scale: 1.5, // Reduced scale from 3 to 1.5 for speed and low file size (~sub 5MB for hundreds of items)
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff'
         });
-
-        const imgData = canvas.toDataURL('image/png');
-
-        // Create individual page with exact 4x2 landscape dimensions
-        const singleDoc = new jsPDF({
-          orientation: 'landscape',
-          unit: 'in',
-          format: [4, 2]
-        });
-
-        singleDoc.addImage(imgData, 'PNG', 0, 0, 4, 2);
-
-        // Convert page to buffer and merge into master PDF using pdf-lib
-        const pdfBytes = singleDoc.output('arraybuffer');
-        const donorPdf = await PDFDocument.load(pdfBytes);
-        const [copiedPage] = await mergedPdf.copyPages(donorPdf, [0]);
-        mergedPdf.addPage(copiedPage);
+        
+        // JPEG format with compression for massive file size reduction compared to PNG data URLs
+        const imgData = canvas.toDataURL('image/jpeg', 0.75);
+        
+        if (i > 0) {
+          pdf.addPage([4, 2], 'landscape');
+        }
+        
+        pdf.addImage(imgData, 'JPEG', 0.1, 0.1, 3.8, 1.8, undefined, 'FAST');
       }
 
-      const mergedPdfBytes = await mergedPdf.save();
-      const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Bulk_${cardType}_Labels_${Date.now()}.pdf`;
-      link.click();
-    } catch (error) {
-      console.error("Error generating exact component PDF:", error);
-      alert("Failed to generate PDF labels.");
+      const fileName = itemsToPrint.length === 1 
+        ? `Label_${cardType === 'roll' ? (itemsToPrint[0].rollNo || 'N/A') : (itemsToPrint[0].element || 'N/A')}.pdf` 
+        : `Bulk_${cardType}_Labels_${itemsToPrint.length}_Items.pdf`;
+
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("Failed to generate PDF label.");
     } finally {
       setIsGeneratingPDF(false);
+      setPrintItems([]);
     }
-  };
+  }, [getItemsForStickers, cardType]);
 
   return (
     <div className="p-4 sm:p-8 bg-gray-50 min-h-screen relative">
@@ -294,11 +300,11 @@ const Warehouse = () => {
           </div>
 
           <button 
-            onClick={handleGenerateBulkPDF} 
+            onClick={() => handleGeneratePDF()} 
             disabled={isGeneratingPDF || selectedRows.length === 0}
             className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2.5 rounded-2xl border border-amber-200 hover:bg-amber-100 transition-all font-semibold shadow-sm disabled:opacity-50 text-sm"
           >
-            <FileText size={18} /> {isGeneratingPDF ? 'Generating Barcodes...' : 'Download PDF Labels'}
+            <FileText size={18} /> {isGeneratingPDF ? 'Generating Barcodes...' : `Download PDF Labels (${getItemsForStickers().length})`}
           </button>
           <button 
             onClick={handleExportExcel} 
@@ -514,6 +520,15 @@ const Warehouse = () => {
                 <ElementBarcodeCard itemData={selectedItem} />
               )}
             </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => handleGeneratePDF(selectedItem)}
+                className="bg-cyan-700 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-cyan-800 transition flex items-center gap-1.5"
+              >
+                <Download size={14} /> Download PDF
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -531,7 +546,6 @@ const Warehouse = () => {
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* 1. Added to Packing List */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">1. Packing List Entry</span>
                 <div className="flex justify-between items-center">
@@ -544,7 +558,6 @@ const Warehouse = () => {
                 </div>
               </div>
 
-              {/* 2. Location Allocated */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">2. Location Allocation</span>
                 {historyItem.itemEntered ? (
@@ -557,7 +570,6 @@ const Warehouse = () => {
                 )}
               </div>
 
-              {/* 3. Update History List */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-2">3. Update History</span>
                 {historyItem.updateHistory && historyItem.updateHistory.length > 0 ? (
@@ -577,7 +589,6 @@ const Warehouse = () => {
                 )}
               </div>
 
-              {/* 4. Exit Details */}
               <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">4. Exit Details</span>
                 {historyItem.exitDetails && historyItem.exitDetails.timestamp ? (
@@ -606,26 +617,21 @@ const Warehouse = () => {
         </div>
       )}
 
-      {/* Hidden Off-Screen Container mounting actual components to guarantee exact layout and authentic barcodes */}
-      {isGeneratingPDF && (
-        <div className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none flex flex-col gap-4">
-          {filteredItems
-            .filter(item => selectedRows.includes(item._id))
-            .map((item) => (
-              <div 
-                key={`exact-component-node-${item._id}`} 
-                ref={el => { if (el) cardRefs.current[item._id] = el; }}
-                style={{ width: '4in', height: '2in', background: '#ffffff', overflow: 'hidden', boxSizing: 'border-box' }}
-              >
-                {cardType === 'roll' ? (
-                  <RollBarcodeCard itemData={item} />
-                ) : (
-                  <ElementBarcodeCard itemData={item} />
-                )}
-              </div>
-          ))}
-        </div>
-      )}
+      {/* Hidden container mounting dedicated print items to prevent race conditions and duplicate DOM nodes */}
+      <div 
+        ref={containerRef}
+        className="fixed top-[-9999px] left-[-9999px] opacity-0 pointer-events-none flex flex-col gap-4"
+      >
+        {printItems.map((item) => (
+          <div key={`container-card-${item._id}`} className="barcode-card-item">
+            {cardType === 'roll' ? (
+              <RollBarcodeCard itemData={item} />
+            ) : (
+              <ElementBarcodeCard itemData={item} />
+            )}
+          </div>
+        ))}
+      </div>
 
     </div>
   );
