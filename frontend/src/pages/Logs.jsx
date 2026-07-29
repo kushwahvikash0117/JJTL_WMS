@@ -3,10 +3,10 @@
  * @description React component rendering system logs and operation history for the JJTL WMS Enterprise Suite.
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { getLogs } from '../api/logService';
 import { getItemByBarcode } from '../api/itemService';
-import { Search, History, X, Info, User, Package, Calendar, FileText } from 'lucide-react';
+import { Search, History, X, Info, User, Package, Calendar, FileText, Filter } from 'lucide-react';
 
 /**
  * Logs Component
@@ -22,8 +22,30 @@ const Logs = () => {
   const [detailedItem, setDetailedItem] = useState(null);
   const [fetchingItem, setFetchingItem] = useState(false);
 
+  // Filter States (matching Warehouse.jsx pattern)
+  const [filters, setFilters] = useState({});
+  const [activeFilterColumn, setActiveFilterColumn] = useState(null);
+  const [filterSearch, setFilterSearch] = useState('');
+
+  // Ref tracker for filter dropdown outside click
+  const filterDropdownRef = useRef(null);
+
   useEffect(() => {
     fetchLogs();
+  }, []);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setActiveFilterColumn(null);
+        setFilterSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,15 +108,62 @@ const Logs = () => {
     }
   };
 
+  // --- Column Configuration for Filters ---
+  const columnsConfig = [
+    { key: 'user', label: 'User', getVal: (log) => log.performedBy?.name || 'System' },
+    { key: 'action', label: 'Action', getVal: (log) => log.action },
+    { key: 'element', label: 'Element', getVal: (log) => log.itemId?.element || 'N/A' },
+    { key: 'poNo', label: 'PO No', getVal: (log) => log.itemId?.poNo || '-' },
+    { key: 'customer', label: 'Customer', getVal: (log) => log.itemId?.buyer || '-' },
+    { key: 'location', label: 'Location', getVal: (log) => log.itemId?.locationName || '-' },
+    { key: 'qty', label: 'Qty', getVal: (log) => log.itemId?.qty !== undefined && log.itemId?.qty !== null ? formatNumber(log.itemId.qty) : '-' },
+    { key: 'timestamp', label: 'Timestamp', getVal: (log) => new Date(log.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) }
+  ];
+
+  // Target columns allowed for dropdown filtering as specified: user, action, element, customer
+  const filterableKeys = ['user', 'action', 'element', 'customer'];
+
+  const getUniqueValues = (colKey) => {
+    const config = columnsConfig.find(c => c.key === colKey);
+    if (!config) return [];
+    return [...new Set(logs.map(log => config.getVal(log)))].filter(Boolean);
+  };
+
+  const toggleFilter = (colKey, value) => {
+    setFilters(prev => {
+      const current = prev[colKey] || [];
+      const updated = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      return { ...prev, [colKey]: updated };
+    });
+  };
+
+  const toggleSelectAllFilters = (colKey) => {
+    const allValues = getUniqueValues(colKey);
+    setFilters(prev => ({ ...prev, [colKey]: prev[colKey]?.length === allValues.length ? [] : allValues }));
+  };
+
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => 
-      log.performedBy?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      log.action?.toLowerCase().includes(search.toLowerCase()) ||
-      log.itemId?.element?.toLowerCase().includes(search.toLowerCase()) ||
-      log.itemId?.poNo?.toLowerCase().includes(search.toLowerCase()) ||
-      log.itemId?.buyer?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [logs, search]);
+    return logs.filter((log) => {
+      // Global Search Bar check
+      const matchesSearch = 
+        log.performedBy?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        log.action?.toLowerCase().includes(search.toLowerCase()) ||
+        log.itemId?.element?.toLowerCase().includes(search.toLowerCase()) ||
+        log.itemId?.poNo?.toLowerCase().includes(search.toLowerCase()) ||
+        log.itemId?.buyer?.toLowerCase().includes(search.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      // Column-specific dropdown filters check
+      return Object.entries(filters).every(([colKey, selectedValues]) => {
+        if (!selectedValues || selectedValues.length === 0) return true;
+        const config = columnsConfig.find(c => c.key === colKey);
+        if (!config) return true;
+        const val = config.getVal(log);
+        return selectedValues.includes(val);
+      });
+    });
+  }, [logs, search, filters]);
 
   /**
    * Determines the Tailwind CSS badge styling based on action type.
@@ -152,14 +221,70 @@ const Logs = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-50/70 text-gray-500 uppercase text-[11px] tracking-wider border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Action</th>
-                  <th className="px-6 py-4">Element</th>
-                  <th className="px-6 py-4">PO No</th>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Location</th>
-                  <th className="px-6 py-4">Qty</th>
-                  <th className="px-6 py-4">Timestamp</th>
+                  {columnsConfig.map((col) => {
+                    const isFilterable = filterableKeys.includes(col.key);
+                    const hasActiveFilter = filters[col.key] && filters[col.key].length > 0;
+                    return (
+                      <th key={col.key} className="px-6 py-4 relative">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          {col.label}
+                          {isFilterable && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveFilterColumn(activeFilterColumn === col.key ? null : col.key);
+                                setFilterSearch('');
+                              }} 
+                              className={`p-1.5 rounded-lg transition-colors ${hasActiveFilter ? 'bg-cyan-100 text-cyan-700' : 'hover:bg-gray-200 text-gray-500'}`}
+                              title="Filter Column"
+                            >
+                              <Filter size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Filter Dropdown */}
+                        {activeFilterColumn === col.key && (
+                          <div 
+                            ref={filterDropdownRef}
+                            className="absolute top-16 left-0 bg-white shadow-2xl border border-gray-200 rounded-2xl p-3.5 w-56 z-30 max-h-72 overflow-y-auto text-left"
+                          >
+                            <div className="relative mb-2.5">
+                              <Search className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
+                              <input 
+                                autoFocus 
+                                placeholder="Search options..." 
+                                className="w-full pl-8 pr-2 py-1.5 text-xs border border-gray-200 rounded-xl outline-none focus:border-cyan-500" 
+                                value={filterSearch} 
+                                onChange={(e) => setFilterSearch(e.target.value)} 
+                              />
+                            </div>
+                            <label className="flex items-center gap-2 text-xs font-bold mb-1.5 p-1 cursor-pointer hover:bg-gray-50 rounded-lg text-gray-700">
+                              <input 
+                                type="checkbox" 
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-600 accent-cyan-600 cursor-pointer"
+                                checked={filters[col.key]?.length === getUniqueValues(col.key).length && getUniqueValues(col.key).length > 0} 
+                                onChange={() => toggleSelectAllFilters(col.key)} 
+                              /> 
+                              Select All
+                            </label>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            {getUniqueValues(col.key).filter(v => String(v).toLowerCase().includes(filterSearch.toLowerCase())).map(val => (
+                              <label key={val} className="flex items-center gap-2 text-xs text-gray-600 py-1.5 px-1 cursor-pointer hover:bg-gray-50 rounded-lg">
+                                <input 
+                                  type="checkbox" 
+                                  className="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-600 accent-cyan-600 cursor-pointer"
+                                  checked={filters[col.key]?.includes(val)} 
+                                  onChange={() => toggleFilter(col.key, val)} 
+                                /> 
+                                <span className="truncate" title={val}>{val}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 text-sm">
@@ -327,7 +452,7 @@ const Logs = () => {
             <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button 
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold text-xs hover:bg-gray-850 transition-colors"
+                className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold text-xs hover:bg-gray-800 transition-colors"
               >
                 Close
               </button>

@@ -88,17 +88,17 @@ const Warehouse = () => {
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
     if (activeTab === 'packing') {
       return {
-        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'netWeight', 'productDescription'],
+        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'currentQuantity', 'productDescription'],
         labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
       };
     } else if (activeTab === 'current') {
       return {
-        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'locationName', 'netWeight', 'productDescription'],
+        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'locationName', 'currentQuantity', 'productDescription'],
         labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
       };
     }
     return {
-      keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'batches', 'netWeight', 'productDescription'],
+      keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'batches', 'currentQuantity', 'productDescription'],
       labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
     };
   }, [activeTab]);
