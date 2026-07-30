@@ -239,18 +239,17 @@ const Warehouse = () => {
 
       const pdf = new jsPDF('landscape', 'in', [4, 2]);
 
-      // Optimized configuration to fulfill <5MB for 300 items and <2 mins for 500 items
       for (let i = 0; i < cardElements.length; i++) {
         const cardEl = cardElements[i];
         const canvas = await html2canvas(cardEl, { 
-          scale: 1.5, // Reduced scale from 3 to 1.5 for speed and low file size (~sub 5MB for hundreds of items)
+          scale: 3, // Increased scale to 3 for high-resolution, crystal-clear labels and barcodes
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff'
         });
         
-        // JPEG format with compression for massive file size reduction compared to PNG data URLs
-        const imgData = canvas.toDataURL('image/jpeg', 0.75);
+        // JPEG format with 0.95 high quality for maximum visual clarity
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         
         if (i > 0) {
           pdf.addPage([4, 2], 'landscape');
