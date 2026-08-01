@@ -113,7 +113,7 @@ const Warehouse = () => {
       if (activeTab === 'packing') {
         return !loc && !batch;
       } else if (activeTab === 'current') {
-        return Boolean(loc) && !batch;
+        return Boolean(loc);
       } else if (activeTab === 'issued') {
         return !loc && Boolean(batch);
       }
