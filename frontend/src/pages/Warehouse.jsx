@@ -61,7 +61,7 @@ const Warehouse = () => {
   }, []);
 
   /**
-   * Helper function to format numbers up to 2 decimal places if they are decimals.
+   * Helper function to format numbers strictly to 2 decimal places.
    * 
    * @param {any} val - Value to format
    * @returns {string|any} Formatted value
@@ -69,7 +69,7 @@ const Warehouse = () => {
   const formatNumber = (val) => {
     if (typeof val === 'number' || (!isNaN(val) && val !== '' && val !== null && val !== undefined)) {
       const num = Number(val);
-      return Number.isInteger(num) ? num : num.toFixed(2);
+      return num.toFixed(2);
     }
     return val;
   };
@@ -88,18 +88,18 @@ const Warehouse = () => {
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
     if (activeTab === 'packing') {
       return {
-        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'currentQuantity', 'productDescription'],
-        labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Qty', 'Description']
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Qty', 'Description', 'Packing List']
       };
     } else if (activeTab === 'current') {
       return {
-        keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'locationName', 'currentQuantity', 'productDescription'],
-        labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Loc', 'Qty', 'Description']
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Loc', 'Qty', 'Description', 'Packing List']
       };
     }
     return {
-      keys: ['packingList', 'buyer', 'createdAt', 'poNo', 'element', 'batches', 'currentQuantity', 'productDescription'],
-      labels: ['Packing List', 'Buyer', 'Date', 'PO No', 'Element ID', 'Batch', 'Qty', 'Description']
+      keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'batches', 'currentQuantity', 'productDescription', 'packingList'],
+      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Batch', 'Qty', 'Description', 'Packing List']
     };
   }, [activeTab]);
 
@@ -125,7 +125,7 @@ const Warehouse = () => {
     if (column === 'createdAt' && item[column]) {
       return new Date(item[column]).toLocaleDateString();
     }
-    if (column === 'qty') {
+    if (column === 'qty' || column === 'currentQuantity') {
       return formatNumber(item[column]);
     }
     return item[column];
@@ -138,7 +138,7 @@ const Warehouse = () => {
         let val = item[col];
         if (col === 'createdAt' && val) {
           val = new Date(val).toLocaleDateString();
-        } else if (col === 'qty') {
+        } else if (col === 'qty' || col === 'currentQuantity') {
           val = formatNumber(val);
         }
         return selectedValues.includes(val);
@@ -464,7 +464,7 @@ const Warehouse = () => {
                     let displayVal = item[col];
                     if (col === 'createdAt' && displayVal) {
                       displayVal = new Date(displayVal).toLocaleDateString();
-                    } else if (col === 'qty') {
+                    } else if (col === 'qty' || col === 'currentQuantity') {
                       displayVal = formatNumber(displayVal);
                     }
                     

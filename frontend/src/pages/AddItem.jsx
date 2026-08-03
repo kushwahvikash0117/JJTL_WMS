@@ -34,7 +34,7 @@ const AddItem = () => {
   
   const [formData, setFormData] = useState({
     buyer: '', poNo: '', productDescription: '', 
-    lot: '', element: '', currentQuantity: '', netWeight: '', 
+    lot: '', yarnLotNo: '', element: '', currentQuantity: '', netWeight: '', 
     grossWeight: '', length: '', breadth: '', height: '',
     packingList: ''
   });
@@ -69,6 +69,7 @@ const AddItem = () => {
         poNo: 'PO-2026-001',
         productDescription: 'Industrial Steel Wire Roll',
         lot: 'LOT-A1',
+        yarnLotNo: 'YL-901',
         element: 'EL-01',
         currentQuantity: 500,
         netWeight: 480,
@@ -83,6 +84,7 @@ const AddItem = () => {
         poNo: 'PO-2026-002',
         productDescription: 'Copper Shielded Cable',
         lot: 'LOT-B2',
+        yarnLotNo: 'YL-902',
         element: 'EL-02',
         currentQuantity: 250,
         netWeight: 240,

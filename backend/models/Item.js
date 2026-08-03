@@ -12,6 +12,7 @@ const itemSchema = new mongoose.Schema({
   buyer: { type: String, required: true }, 
   poNo: { type: String, required: true }, 
   lot: { type: String, required: true }, 
+  yarnLotNo: { type: String, default: null }, 
   element: { type: String, required: true, unique: true },
   productDescription: String, 
   initialQuantity: Number, 
