@@ -146,6 +146,16 @@ const Warehouse = () => {
     });
   }, [tabFilteredItems, filters]);
 
+  // --- Total Quantity Calculation for Current Stock ---
+  const totalFilteredQuantity = useMemo(() => {
+    if (activeTab !== 'current') return 0;
+    return filteredItems.reduce((sum, item) => {
+      const qty = item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty;
+      const num = Number(qty);
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+  }, [filteredItems, activeTab]);
+
   /**
    * Resets selected rows and filters when switching inventory tabs.
    * 
@@ -168,9 +178,19 @@ const Warehouse = () => {
     });
   };
 
-  const toggleSelectAllFilters = (col) => {
-    const allValues = getUniqueValues(col);
-    setFilters(prev => ({ ...prev, [col]: prev[col]?.length === allValues.length ? [] : allValues }));
+  const toggleSelectAllFilters = (col, searchFilteredValues) => {
+    setFilters(prev => {
+      const allSelected = searchFilteredValues.every(val => prev[col]?.includes(val));
+      if (allSelected) {
+        // Remove searchFilteredValues from current selection
+        const updated = (prev[col] || []).filter(v => !searchFilteredValues.includes(v));
+        return { ...prev, [col]: updated };
+      } else {
+        // Add all searchFilteredValues while keeping other selections unique
+        const combined = Array.from(new Set([...(prev[col] || []), ...searchFilteredValues]));
+        return { ...prev, [col]: combined };
+      }
+    });
   };
 
   // --- Row Selection Logic ---
@@ -355,6 +375,17 @@ const Warehouse = () => {
                 {activeColumnLabels.map((h, i) => {
                   const colKey = activeColumns[i];
                   const hasActiveFilter = filters[colKey] && filters[colKey].length > 0;
+                  const uniqueVals = getUniqueValues(colKey);
+                  const searchFilteredVals = uniqueVals.filter(v => {
+                    if (colKey === 'productDescription') {
+                      const searchWords = filterSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
+                      if (searchWords.length === 0) return true;
+                      const targetStr = String(v).toLowerCase();
+                      return searchWords.every(word => targetStr.includes(word));
+                    }
+                    return String(v).toLowerCase().includes(filterSearch.toLowerCase());
+                  });
+
                   return (
                     <th key={h} className="px-6 py-5 relative">
                       <div className="flex items-center gap-1 whitespace-nowrap">
@@ -376,7 +407,7 @@ const Warehouse = () => {
                       {activeFilterColumn === colKey && (
                         <div 
                           ref={filterDropdownRef}
-                          className="absolute top-16 left-0 bg-white shadow-2xl border border-gray-200 rounded-2xl p-3.5 w-56 z-30 max-h-72 overflow-y-auto"
+                          className="absolute top-16 left-0 bg-white shadow-2xl border border-gray-200 rounded-2xl p-3.5 w-64 z-30 max-h-72 overflow-y-auto"
                         >
                           <div className="relative mb-2.5">
                             <Search className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
@@ -392,13 +423,13 @@ const Warehouse = () => {
                             <input 
                               type="checkbox" 
                               className="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-600 accent-cyan-600 cursor-pointer"
-                              checked={filters[colKey]?.length === getUniqueValues(colKey).length && getUniqueValues(colKey).length > 0} 
-                              onChange={() => toggleSelectAllFilters(colKey)} 
+                              checked={searchFilteredVals.length > 0 && searchFilteredVals.every(val => filters[colKey]?.includes(val))} 
+                              onChange={() => toggleSelectAllFilters(colKey, searchFilteredVals)} 
                             /> 
                             Select All
                           </label>
                           <div className="border-t border-gray-100 my-1"></div>
-                          {getUniqueValues(colKey).filter(v => String(v).toLowerCase().includes(filterSearch.toLowerCase())).map(val => (
+                          {searchFilteredVals.map(val => (
                             <label key={val} className="flex items-center gap-2 text-xs text-gray-600 py-1.5 px-1 cursor-pointer hover:bg-gray-50 rounded-lg">
                               <input 
                                 type="checkbox" 
@@ -406,7 +437,7 @@ const Warehouse = () => {
                                 checked={filters[colKey]?.includes(val)} 
                                 onChange={() => toggleFilter(colKey, val)} 
                               /> 
-                              <span className="truncate" title={val}>{val}</span>
+                              <span className="whitespace-normal break-words" title={val}>{val}</span>
                             </label>
                           ))}
                         </div>
@@ -484,6 +515,21 @@ const Warehouse = () => {
                 </tr>
               )}
             </tbody>
+            
+            {/* Total Quantity Footer Row for Current Stock Tab */}
+            {activeTab === 'current' && filteredItems.length > 0 && (
+              <tfoot className="bg-gray-50 font-bold border-t border-gray-200">
+                <tr>
+                  <td colSpan={activeColumns.indexOf('currentQuantity') + 2} className="px-6 py-4 text-right text-gray-700 text-sm">
+                    Total Quantity:
+                  </td>
+                  <td className="px-6 py-4 text-cyan-700 text-sm">
+                    {formatNumber(totalFilteredQuantity)}
+                  </td>
+                  <td colSpan={activeColumns.length - activeColumns.indexOf('currentQuantity') + 1} />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

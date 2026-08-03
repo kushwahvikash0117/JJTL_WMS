@@ -139,25 +139,37 @@ const Dashboard = () => {
     };
   }, [stats, logs, items]);
 
-  // Process data for Buyer Bar Chart (Top 5 Buyers count)
+  // Process data for Buyer Bar Chart (All Buyers with a location assigned) with horizontal scrolling container if many buyers exist
   const buyerChartData = useMemo(() => {
     const buyerCounts = {};
     logs.forEach((log) => {
-      const buyer = log.itemId?.buyer;
-      if (buyer && buyer !== '-') {
-        buyerCounts[buyer] = (buyerCounts[buyer] || 0) + 1;
+      const item = log.itemId;
+      if (!item) return;
+
+      // Current stock criteria: Location assigned (not null/empty)
+      const hasNotNullLocation = Boolean(
+        (item.locationName && String(item.locationName).trim() !== '') || 
+        (item.locationBarcode && String(item.locationBarcode).trim() !== '') || 
+        item.locationId
+      );
+
+      if (hasNotNullLocation) {
+        const buyer = item.buyer;
+        if (buyer && buyer !== '-') {
+          buyerCounts[buyer] = (buyerCounts[buyer] || 0) + 1;
+        }
       }
     });
 
+    // Sort all buyers by count descending (without slice(0, 5) to include all)
     const sortedBuyers = Object.entries(buyerCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+      .sort((a, b) => b[1] - a[1]);
 
     return {
       labels: sortedBuyers.map(([buyer]) => buyer),
       datasets: [
         {
-          label: 'Logs Count by Buyer',
+          label: 'Current Stock Logs by Buyer',
           data: sortedBuyers.map(([, count]) => count),
           backgroundColor: 'rgba(8, 145, 178, 0.8)',
           borderRadius: 8,
@@ -262,30 +274,35 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         
-        {/* Bar Graph: Buyer Count Distribution */}
+        {/* Bar Graph: Buyer Count Distribution (Current Stock with Location Only, Scrollable for all buyers) */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-              <BarChart2 size={18} className="text-cyan-600" /> Top Buyers Activity Count
-            </h2>
+            <div>
+              <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <BarChart2 size={18} className="text-cyan-600" /> Buyers (Current Stock - Location Assigned)
+              </h2>
+              <p className="text-xs text-gray-400">Scroll horizontally to view all buyers</p>
+            </div>
           </div>
-          <div className="h-72 flex items-center justify-center">
-            {loading ? (
-              <span className="text-gray-400 text-sm animate-pulse">Loading chart data...</span>
-            ) : (
-              <Bar 
-                data={buyerChartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: {
-                    y: { grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
-                    x: { grid: { display: false } }
-                  }
-                }} 
-              />
-            )}
+          <div className="w-full overflow-x-auto pb-2">
+            <div className="min-w-[600px] h-72 flex items-center justify-center">
+              {loading ? (
+                <span className="text-gray-400 text-sm animate-pulse">Loading chart data...</span>
+              ) : (
+                <Bar 
+                  data={buyerChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      y: { grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+                      x: { grid: { display: false } }
+                    }
+                  }} 
+                />
+              )}
+            </div>
           </div>
         </div>
 

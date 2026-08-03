@@ -53,6 +53,32 @@ const ScanItem = () => {
   };
 
   /**
+   * Helper function to determine the stock status of an item.
+   * 
+   * @param {Object} itemData - The item object
+   * @returns {Object} Status label and badge styling information
+   */
+  const getItemStockStatus = (itemData) => {
+    if (!itemData) return { label: 'Unknown', bg: 'bg-gray-100', text: 'text-gray-700' };
+
+    const locName = itemData.locationName;
+    const locBarcode = itemData.locationBarcode;
+    const batch = itemData.batches;
+
+    const hasLocation = Boolean(locName || locBarcode);
+    const hasBatch = Boolean(batch);
+
+    if (!hasLocation && !hasBatch) {
+      return { label: 'Packing List', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+    } else if (hasLocation) {
+      return { label: 'Current Stock', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
+    } else if (!hasLocation && hasBatch) {
+      return { label: 'Issued Stock', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
+    }
+    return { label: 'Warehouse Item', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
+  };
+
+  /**
    * Handles search and location barcode resolution on form submission.
    * 
    * @param {React.FormEvent} e - Form event
@@ -444,10 +470,23 @@ const ScanItem = () => {
               </div>
             ) : (
               <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-3">
                   <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm"><Package size={18}/> {item?.rollNo}</h3>
                   <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
+
+                {/* Stock Status Badge Banner */}
+                {(() => {
+                  const status = getItemStockStatus(item);
+                  return (
+                    <div className={`mb-4 px-3 py-2 rounded-xl border ${status.bg} ${status.border} flex items-center justify-between text-xs font-bold`}>
+                      <span className="text-gray-600">Stock Status:</span>
+                      <span className={`px-2.5 py-1 rounded-lg ${status.bg} ${status.text} border ${status.border}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {!actionType ? (
                   <div className="space-y-3">
