@@ -1,6 +1,6 @@
 /**
  * @file RollBarcodeCard.jsx
- * @description React component for rendering a single inventory item label card with rollNo-based barcodes, custom-spaced barcode values, date at the top, and bold content.
+ * @description React component for rendering a single inventory item label card with rollNo-based barcodes, custom-spaced barcode values, yarn lot no, date at the top, and bold content.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -65,9 +65,10 @@ const RollBarcodeCard = ({ itemData }) => {
             <div className="col-span-2 whitespace-normal break-words leading-tight">Desc: {data.productDescription || 'N/A'}</div>
             <div>Element: {data.element || 'N/A'}</div>
             <div>Lot: {data.lot || 'N/A'}</div>
+            <div>Yarn Lot: {data.yarnLotNo || 'N/A'}</div>
             <div>Net Weight: {data.netWeight || 'N/A'}</div>
             <div>Quantity: {data.qty ?? data.currentQuantity ?? 'N/A'}</div>
-            <div className="col-span-2">Gross Weight: {data.grossWeight || 'N/A'}</div>
+            <div>Gross Weight: {data.grossWeight || 'N/A'}</div>
           </div>
 
           {/* Footer Barcode Section */}

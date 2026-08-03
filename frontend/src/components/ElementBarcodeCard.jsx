@@ -1,6 +1,6 @@
 /**
  * @file ElementBarcodeCard.jsx
- * @description React component for rendering a single inventory item label card with custom-spaced element barcode values and date moved to the top.
+ * @description React component for rendering a single inventory item label card with custom-spaced element barcode values, yarn lot no, and date moved to the top.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -63,9 +63,10 @@ const ElementBarcodeCard = ({ itemData }) => {
         <div className="col-span-2 whitespace-normal break-words leading-tight">Desc: {data.productDescription || 'N/A'}</div>
         <div>Element: {data.element || 'N/A'}</div>
         <div>Lot: {data.lot || 'N/A'}</div>
+        <div>Yarn Lot: {data.yarnLotNo || 'N/A'}</div>
         <div>Net Weight: {data.netWeight || 'N/A'}</div>
         <div>Quantity: {data.qty ?? data.currentQuantity ?? 'N/A'}</div>
-        <div className="col-span-2">Gross Weight: {data.grossWeight || 'N/A'}</div>
+        <div>Gross Weight: {data.grossWeight || 'N/A'}</div>
       </div>
 
       {/* Footer Barcode Section */}
