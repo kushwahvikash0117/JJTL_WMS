@@ -475,16 +475,32 @@ const ScanItem = () => {
                   <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
 
-                {/* Stock Status Badge Banner */}
+                {/* Stock Status Badge Banner & Location Information */}
                 {(() => {
                   const status = getItemStockStatus(item);
+                  const isCurrentStock = status.label === 'Current Stock';
+                  const locationDisplay = item?.locationName || item?.locationBarcode || 'N/A';
+
                   return (
-                    <div className={`mb-4 px-3 py-2 rounded-xl border ${status.bg} ${status.border} flex items-center justify-between text-xs font-bold`}>
-                      <span className="text-gray-600">Stock Status:</span>
-                      <span className={`px-2.5 py-1 rounded-lg ${status.bg} ${status.text} border ${status.border}`}>
-                        {status.label}
-                      </span>
-                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className={`px-3 py-2 rounded-xl border ${status.bg} ${status.border} flex items-center justify-between text-xs font-bold`}>
+                        <span className="text-gray-600">Stock Status:</span>
+                        <span className={`px-2.5 py-1 rounded-lg ${status.bg} ${status.text} border ${status.border}`}>
+                          {status.label}
+                        </span>
+                      </div>
+
+                      {isCurrentStock && (
+                        <div className="px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 flex items-center justify-between text-xs font-bold">
+                          <span className="text-gray-600 flex items-center gap-1">
+                            <MapPin size={14} className="text-emerald-600" /> Location:
+                          </span>
+                          <span className="font-mono text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded">
+                            {locationDisplay}
+                          </span>
+                        </div>
+                      )}
+                  </div>
                   );
                 })()}
 
@@ -502,46 +518,46 @@ const ScanItem = () => {
                         className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" 
                         value={inputValue.bin || ''}
                         onChange={(e) => setInputValue({bin: e.target.value})} 
-                      />
-                    )}
-                    
-                    {actionType === 'UPDATE' && (
-                      <div className="space-y-2.5">
-                        <div className="bg-cyan-50 p-2.5 rounded-xl border border-cyan-100 text-xs text-cyan-800 mb-1">
-                          Current Quantity: <span className="font-bold">
-                            {formatNumber(item?.currentQuantity !== undefined && item?.currentQuantity !== null ? item.currentQuantity : (item?.qty || 0))}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold text-gray-500 block mb-1">New Total Quantity</label>
-                          <input type="number" step="any" placeholder="New Quantity" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.currentQuantity || ''} onChange={(e) => setInputValue({...inputValue, currentQuantity: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold text-gray-500 block mb-1">Batch Number</label>
-                          <input placeholder="Batch No" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.batchNo || ''} onChange={(e) => setInputValue({...inputValue, batchNo: e.target.value})} />
-                        </div>
+                    />
+                  )}
+                  
+                  {actionType === 'UPDATE' && (
+                    <div className="space-y-2.5">
+                      <div className="bg-cyan-50 p-2.5 rounded-xl border border-cyan-100 text-xs text-cyan-800 mb-1">
+                        Current Quantity: <span className="font-bold">
+                          {formatNumber(item?.currentQuantity !== undefined && item?.currentQuantity !== null ? item.currentQuantity : (item?.qty || 0))}
+                        </span>
                       </div>
-                    )}
-
-                    {actionType === 'EXIT' && (
-                      <input placeholder="Batch ID" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" onChange={(e) => setInputValue({batch: e.target.value})} />
-                    )}
-                    
-                    <div className="flex gap-2 pt-4">
-                      <button type="button" onClick={() => setActionType(null)} className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm text-gray-600 transition">Back</button>
-                      <button type="button" onClick={handleAction} disabled={loading} className="flex-1 p-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-cyan-600/20">
-                        {loading ? '...' : <>Save <Save size={16}/></>}
-                      </button>
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-500 block mb-1">New Total Quantity</label>
+                        <input type="number" step="any" placeholder="New Quantity" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.currentQuantity || ''} onChange={(e) => setInputValue({...inputValue, currentQuantity: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-gray-500 block mb-1">Batch Number</label>
+                        <input placeholder="Batch No" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" value={inputValue.batchNo || ''} onChange={(e) => setInputValue({...inputValue, batchNo: e.target.value})} />
+                      </div>
                     </div>
-                  </div>
                 )}
+
+                {actionType === 'EXIT' && (
+                    <input placeholder="Batch ID" className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:border-cyan-500 text-sm" onChange={(e) => setInputValue({batch: e.target.value})} />
+                )}
+                
+                <div className="flex gap-2 pt-4">
+                    <button type="button" onClick={() => setActionType(null)} className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm text-gray-600 transition">Back</button>
+                    <button type="button" onClick={handleAction} disabled={loading} className="flex-1 p-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-cyan-600/20">
+                      {loading ? '...' : <>Save <Save size={16}/></>}
+                    </button>
+                </div>
+              </div>
+              )}
               </div>
             )}
 
           </div>
         </div>
       )}
-    </div>
+  </div>
   );
 };
 
