@@ -279,7 +279,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <BarChart2 size={18} className="text-cyan-600" /> Buyers (Current Stock - Location Assigned)
+                <BarChart2 size={18} className="text-cyan-600" /> Buyers
               </h2>
               <p className="text-xs text-gray-400">Scroll horizontally to view all buyers</p>
             </div>
