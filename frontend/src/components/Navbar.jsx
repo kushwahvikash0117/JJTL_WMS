@@ -21,6 +21,7 @@ const Navbar = () => {
     { name: 'Add Item', path: '/add-item', icon: PlusCircle },
     { name: 'Scan', path: '/scan', icon: ScanBarcode },
     { name: 'Inventory', path: '/inventory', icon: Boxes },
+    { name: 'Summary', path: '/summary', icon: FileText },
     { name: 'Inventory Digital View', path: '/inventory-digital-view', icon: Monitor },
     { name: 'Logs', path: '/logs', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Sliders },

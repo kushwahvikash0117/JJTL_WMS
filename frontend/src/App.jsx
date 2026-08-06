@@ -17,6 +17,7 @@ import ScanItem from './pages/ScanItem';
 import Logs from './pages/Logs';
 import Settings from './pages/Settings';
 import InventoryDigitalView from './pages/InventoryDigitalView';
+import SummaryView from './pages/SummaryView';
 
 // Layout Components
 import Navbar from './components/Navbar';
@@ -79,7 +80,7 @@ const App = () => {
         <Route path="/logs" element={<ProtectedLayout><Logs /></ProtectedLayout>} />
         <Route path="/settings" element={<ProtectedLayout><Settings /></ProtectedLayout>} />
         <Route path="/inventory-digital-view" element={<ProtectedLayout><InventoryDigitalView /></ProtectedLayout>} />
-        
+        <Route path="/summary" element={<ProtectedLayout><SummaryView /></ProtectedLayout>} />
         {/* Catch-all for 404 */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
