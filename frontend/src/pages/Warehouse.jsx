@@ -121,15 +121,33 @@ const Warehouse = () => {
     });
   }, [items, activeTab]);
 
-  const getUniqueValues = (column) => [...new Set(tabFilteredItems.map(item => {
-    if (column === 'createdAt' && item[column]) {
-      return new Date(item[column]).toLocaleDateString();
-    }
-    if (column === 'qty' || column === 'currentQuantity') {
-      return formatNumber(item[column]);
-    }
-    return item[column];
-  }))].filter(Boolean);
+  // --- Cascading Filter Options Logic ---
+  // Computes unique values for a column based on filters applied to *other* columns
+  const getUniqueValues = (column) => {
+    const subFiltered = tabFilteredItems.filter(item => {
+      return Object.entries(filters).every(([col, selectedValues]) => {
+        if (col === column) return true; // Skip current column to allow dependent choices
+        if (!selectedValues || selectedValues.length === 0) return true;
+        let val = item[col];
+        if (col === 'createdAt' && val) {
+          val = new Date(val).toLocaleDateString();
+        } else if (col === 'qty' || col === 'currentQuantity') {
+          val = formatNumber(val);
+        }
+        return selectedValues.includes(val);
+      });
+    });
+
+    return [...new Set(subFiltered.map(item => {
+      if (column === 'createdAt' && item[column]) {
+        return new Date(item[column]).toLocaleDateString();
+      }
+      if (column === 'qty' || column === 'currentQuantity') {
+        return formatNumber(item[column]);
+      }
+      return item[column];
+    }))].filter(Boolean);
+  };
 
   const filteredItems = useMemo(() => {
     return tabFilteredItems.filter(item => {
@@ -146,15 +164,14 @@ const Warehouse = () => {
     });
   }, [tabFilteredItems, filters]);
 
-  // --- Total Quantity Calculation for Current Stock ---
+  // --- Total Quantity Calculation for All Tabs ---
   const totalFilteredQuantity = useMemo(() => {
-    if (activeTab !== 'current') return 0;
     return filteredItems.reduce((sum, item) => {
       const qty = item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty;
       const num = Number(qty);
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
-  }, [filteredItems, activeTab]);
+  }, [filteredItems]);
 
   /**
    * Resets selected rows and filters when switching inventory tabs.
@@ -516,8 +533,8 @@ const Warehouse = () => {
               )}
             </tbody>
             
-            {/* Total Quantity Footer Row for Current Stock Tab */}
-            {activeTab === 'current' && filteredItems.length > 0 && (
+            {/* Total Quantity Footer Row for All Tabs */}
+            {filteredItems.length > 0 && (
               <tfoot className="bg-gray-50 font-bold border-t border-gray-200">
                 <tr>
                   <td colSpan={activeColumns.indexOf('currentQuantity') + 2} className="px-6 py-4 text-right text-gray-700 text-sm">
