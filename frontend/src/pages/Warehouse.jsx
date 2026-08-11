@@ -24,7 +24,7 @@ const Warehouse = () => {
   const [cardType, setCardType] = useState('roll');
   
   // Tab State
-  const [activeTab, setActiveTab] = useState('packing'); // 'packing' | 'current' | 'issued'
+  const [activeTab, setActiveTab] = useState('packing'); // 'packing' | 'current' | 'updated' | 'issued'
 
   // Filter States
   const [filters, setFilters] = useState({});
@@ -96,6 +96,11 @@ const Warehouse = () => {
         keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
         labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Loc', 'Qty', 'Description', 'Packing List']
       };
+    } else if (activeTab === 'updated') {
+      return {
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Loc', 'Qty', 'Description', 'Packing List']
+      };
     }
     return {
       keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'batches', 'currentQuantity', 'productDescription', 'packingList'],
@@ -109,13 +114,17 @@ const Warehouse = () => {
     return items.filter(item => {
       const loc = item.locationName;
       const batch = item.batches;
+      const updateHistory = item.updateHistory;
+      const currentQty = Number(item.currentQuantity !== undefined && item.currentQuantity !== null ? item.currentQuantity : item.qty);
 
       if (activeTab === 'packing') {
         return !loc && !batch;
       } else if (activeTab === 'current') {
-        return Boolean(loc);
+        return Boolean(loc) && (!updateHistory || updateHistory.length === 0);
+      } else if (activeTab === 'updated') {
+        return Boolean(loc) && Boolean(updateHistory && updateHistory.length > 0);
       } else if (activeTab === 'issued') {
-        return !loc && Boolean(batch);
+        return (!loc && Boolean(batch)) || currentQty === 0;
       }
       return true;
     });
@@ -353,22 +362,28 @@ const Warehouse = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 mb-6 gap-8">
+      <div className="flex border-b border-gray-200 mb-6 gap-8 overflow-x-auto">
         <button
           onClick={() => handleTabChange('packing')}
-          className={`pb-3 font-bold text-sm border-b-2 transition-all ${activeTab === 'packing' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`pb-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'packing' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
           Packing List
         </button>
         <button
           onClick={() => handleTabChange('current')}
-          className={`pb-3 font-bold text-sm border-b-2 transition-all ${activeTab === 'current' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`pb-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'current' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
           Current Stock
         </button>
         <button
+          onClick={() => handleTabChange('updated')}
+          className={`pb-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'updated' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        >
+          Updated Stock
+        </button>
+        <button
           onClick={() => handleTabChange('issued')}
-          className={`pb-3 font-bold text-sm border-b-2 transition-all ${activeTab === 'issued' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`pb-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${activeTab === 'issued' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
           Issued Stock
         </button>
