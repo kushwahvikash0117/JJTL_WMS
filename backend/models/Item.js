@@ -22,6 +22,7 @@ const itemSchema = new mongoose.Schema({
   length: Number, 
   breadth: Number, 
   height: Number,
+  gsm: Number,
   
   // Legacy field maintained for backwards compatibility
   batches: String, 

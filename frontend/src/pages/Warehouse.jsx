@@ -88,30 +88,37 @@ const Warehouse = () => {
   const { keys: activeColumns, labels: activeColumnLabels } = useMemo(() => {
     if (activeTab === 'packing') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'currentQuantity', 'productDescription', 'packingList'],
-        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Qty', 'Description', 'Packing List']
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'gsm', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'GSM', 'Qty', 'Description', 'Packing List']
       };
     } else if (activeTab === 'current') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
-        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Loc', 'Qty', 'Description', 'Packing List']
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'gsm', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'GSM', 'Loc', 'Qty', 'Description', 'Packing List']
       };
     } else if (activeTab === 'updated') {
       return {
-        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'locationName', 'currentQuantity', 'productDescription', 'packingList'],
-        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Loc', 'Qty', 'Description', 'Packing List']
+        keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'gsm', 'locationName', 'lastBatchNo', 'currentQuantity', 'productDescription', 'packingList'],
+        labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'GSM', 'Loc', 'Batch No', 'Qty', 'Description', 'Packing List']
       };
     }
     return {
-      keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'batches', 'currentQuantity', 'productDescription', 'packingList'],
-      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'Batch', 'Qty', 'Description', 'Packing List']
+      keys: ['buyer', 'createdAt', 'poNo', 'element', 'yarnLotNo', 'gsm', 'batches', 'currentQuantity', 'productDescription', 'packingList'],
+      labels: ['Buyer', 'Date', 'PO No', 'Element ID', 'Yarn Lot No', 'GSM', 'Batch', 'Qty', 'Description', 'Packing List']
     };
   }, [activeTab]);
 
 
-  // --- Tab Categorization Logic ---
+  // --- Tab Categorization & Computed Field Logic ---
   const tabFilteredItems = useMemo(() => {
-    return items.filter(item => {
+    return items.map(item => {
+      // If it's the updated tab, compute the last batch number from updateHistory
+      let lastBatchNo = 'N/A';
+      if (item.updateHistory && item.updateHistory.length > 0) {
+        lastBatchNo = item.updateHistory[item.updateHistory.length - 1].batchNo || 'N/A';
+      }
+      return { ...item, lastBatchNo };
+    }).filter(item => {
       const loc = item.locationName;
       const batch = item.batches;
       const updateHistory = item.updateHistory;

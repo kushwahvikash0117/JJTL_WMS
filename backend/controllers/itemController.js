@@ -227,7 +227,7 @@ export const batchExitItems = async (req, res) => {
  */
 export const updateItem = async (req, res) => {
   try {
-    const { currentQuantity, batchNo, yarnLotNo } = req.body;
+    const { currentQuantity, batchNo, yarnLotNo, gsm } = req.body;
     
     if (currentQuantity === undefined) {
       return res.status(400).json({ error: "Current quantity is required" });
@@ -250,6 +250,10 @@ export const updateItem = async (req, res) => {
 
     if (yarnLotNo !== undefined) {
       updateData.yarnLotNo = yarnLotNo;
+    }
+
+    if (gsm !== undefined) {
+      updateData.gsm = gsm !== '' ? Number(gsm) : null;
     }
 
     let updateQuery = { $set: updateData };
